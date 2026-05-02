@@ -3,7 +3,7 @@ name: orchestra-fusion
 description: "多智能体编排融合方案。融合四个顶尖编排框架的基因：Agent Team Orchestration 的角色生命周期 + Claude DevFleet 的 DAG/auto_dispatch + dmux-workflows 的并行模式库 + oh-my-opencode 的 Slot并发/Intent Gate/熔断器。Use when 用户说\"编排多个agent\"\"并行执行\"\"构建多智能体流水线\"\"设计agent团队\"\"orchestrate agents\"\"multi-agent workflow\"\"agent pipeline\"\"全队出击\"\"ultrawork\"。"
 description_zh: "多智能体编排融合方案 — ATO × DevFleet × dmux × OMO 四源基因杂交"
 description_en: "Multi-agent orchestration fusion — hybrid of ATO, DevFleet, dmux, and OMO patterns"
-version: 1.2.1
+version: 1.2.2
 agent_created: true
 allowed-tools: Read,Write,Edit,Bash,Glob,Grep,TaskCreate,TaskGet,TaskUpdate,TaskList,SendMessage
 ---
@@ -112,11 +112,7 @@ Layer 3: Executors（执行层）
 | **Reviewer** | TaskCreate | 只审查，不派生新任务 |
 | **Worker** | TaskCreate, SendMessage(broadcast) | 只执行分配任务，不自行扩编 |
 
-**核心原则（不变）：**
-- Orchestrator 不执行建造工作
-- 每个产出物至少经过一双没参与建造的眼睛审查
-- Reviewer 不能审查自己建造的产出物
-- L1 层角色（除Orchestrator外）不能互相派生 — 防止递归规划循环
+**核心原则：** Orchestrator 不建造 | 每产出物必审 | Reviewer 不能审自己造的 | L1（除Orchestrator外）不互派生（防递归循环）
 
 ### 任务生命周期
 
@@ -187,14 +183,9 @@ auto_dispatch 设置：
   - Reviewer 任务：依赖 Builder 完成 → auto_dispatch=true
 ```
 
-### 步骤3：展示计划，等待确认
+### 步骤3：展示计划，等用户确认
 
-向用户展示完整的任务 DAG，包括：
-- 每个节点的角色、输入、输出
-- 依赖关系图
-- 预计并发数
-
-**用户确认后才派发第一批任务。**
+展示 DAG（节点/角色/输入输出/依赖/并发数），**用户确认后才派发。**
 
 ---
 
@@ -424,11 +415,7 @@ Orchestrator 必须介入做决策
 | `{provider}/{model}` | `anthropic/claude-opus-4-7` | 明确模型时 |
 | `{agent_role}` | `scout`, `builder`, `reviewer` | 降级（模型未指定时） |
 
-**关键机制：**
-- 同 Key 任务排队，不同 Key 任务真正并行
-- 任务获取槽位后才开始执行
-- 完成或失败后自动释放槽位
-- 排队任务通过 Promise waiter 模式自动唤醒
+**关键机制：** 同 Key 排队（FIFO），不同 Key 真并行；获取槽位后执行，完成释放；排队任务 Promise waiter 自动唤醒。
 
 ### Circuit Breaker 熔断器 — 来自 OMO
 
@@ -450,10 +437,9 @@ Orchestrator 必须介入做决策
 
 ### Unstable Agent 处理 — 来自 OMO
 
-当Agent使用不稳定模型（如频繁断连的provider）时：
-- 自动升格为**监控后台模式**
-- 任务不会因父session中断而丢失
-- 通过 `task_id` 支持跨session续接
+- 不稳定模型（频繁断连）→ 自动升格为**监控后台模式**
+- 任务不因父 session 中断而丢失
+- 通过 `task_id` 支持跨 session 续接
 
 ### 工作树隔离
 
@@ -495,19 +481,7 @@ Orchestrator 在 Dispatch 阶段根据任务特征自动选择 Category，Worker
 | 🚪 Review Gate | Review→Done | 至少1个独立Reviewer通过 | ATO |
 | 🚪 Ship Gate | Report→Done | 用户最终确认 | 独创 |
 
-**审查标准：**
-```
-✅ 产出物是否符合任务描述？
-✅ 是否有测试/验证方法？
-✅ 是否有明显的边界条件遗漏？
-✅ Handoff 文档是否完整？
-```
-
-如果审查不通过：
-1. Reviewer 写出具体问题
-2. Orchestrator 将任务返回 In_Progress
-3. Builder 修复 → 重新提交 Handoff → 重新审查
-4. 最多 3 轮，第 4 轮升级为 Escalation 模式
+**审查标准 + 不通过流程：** ✅ 产出符合描述？测试/验证？边界覆盖？Handoff 完整？ → 不通过则 Reviewer 指出问题 → In_Progress → Builder 修复 → 重新审查（最多3轮，第4轮升级 Escalation）
 
 ---
 
