@@ -3,7 +3,7 @@ name: orchestra-fusion
 description: "多智能体编排融合方案。融合四个顶尖编排框架的基因：Agent Team Orchestration 的角色生命周期 + Claude DevFleet 的 DAG/auto_dispatch + dmux-workflows 的并行模式库 + oh-my-opencode 的 Slot并发/Intent Gate/熔断器。Use when 用户说\"编排多个agent\"\"并行执行\"\"构建多智能体流水线\"\"设计agent团队\"\"orchestrate agents\"\"multi-agent workflow\"\"agent pipeline\"\"全队出击\"\"ultrawork\"。"
 description_zh: "多智能体编排融合方案 — ATO × DevFleet × dmux × OMO 四源基因杂交"
 description_en: "Multi-agent orchestration fusion — hybrid of ATO, DevFleet, dmux, and OMO patterns"
-version: 1.5.1
+version: 1.5.2
 agent_created: true
 allowed-tools: Read,Write,Edit,Bash,Glob,Grep,TaskCreate,TaskGet,TaskUpdate,TaskList,SendMessage
 ---
@@ -25,6 +25,7 @@ allowed-tools: Read,Write,Edit,Bash,Glob,Grep,TaskCreate,TaskGet,TaskUpdate,Task
 "全队出击，重构认证模块"        →   Pre-Planning → 多Builder并行 → Review Pipeline
 "先调研再决定方案"              →   Interview-Mode → 访谈澄清 → 再Plan
 "这个任务太大了，拆开并行做"    →   DAG构建 → auto_dispatch → Slot并发
+"改个登录页标题"                →   降级：直接执行，不启用编排
 ```
 
 **三条黄金法则：**
@@ -32,19 +33,7 @@ allowed-tools: Read,Write,Edit,Bash,Glob,Grep,TaskCreate,TaskGet,TaskUpdate,Task
 2. 每次计划展示后你会看到 **DAG 图 + 并发方案**，确认才执行
 3. 执行中你会看到**实时看板**，异常自动熔断
 
-**最简示例：**
-
-```
-👤 用户："构建一个 REST API + 前端 Dashboard"
-
-🤖 Intent Gate："Implementation任务，中等复杂度，两个模块独立可并行"
-🤖 Plan：
-   Wave 1: Scout:API调研 + Scout:前端调研           ← 并行
-   Wave 2: Builder:API实现 + Builder:前端实现       ← 并行
-   Wave 3: Reviewer:API审查 + Reviewer:前端审查     ← 并行
-   
-👤 用户确认 → Dispatch → Monitor(看板) → Report → Done
-```
+> 完整编排示例见下方「使用方式 → 基础用法」。
 
 > 以下为完整参考手册，首次使用只需看 Quick-Start 即可。
 
@@ -621,15 +610,14 @@ Alerts: None
 
 | 用户输入 | 自动触发的流程 | 预计模式 |
 |---------|-------------|---------|
-| "帮我用 agent 团队重构认证模块" | Intent→Plan→DAG→Dispatch→Monitor | Pattern 1+2 |
-| "先调研一下微服务方案再决定" | Interview-Mode→访谈→Plan→Dispatch | Pattern 0 |
-| "全队出击，把这个项目上线" | Pre-Planning→全L1→Multi-Build→Review Pipeline | 全流程 |
-| "改个登录页的标题" | 直接执行（不启用编排） | 降级 |
-| "评估这个任务的复杂度" | 只分析：Intent Gate→Plan→展示DAG | 仅评估 |
-| "上次的任务继续" | task_id 续接→Monitor→Continue | 中断恢复 |
+| "用 agent 团队构建 X" | Intent→Plan→DAG→Dispatch→Monitor | 全流程编排 |
 | "同时写 A、B、C模块的单元测试" | DAG→Multi-Build→Slot并发3/5 | Pattern 2 |
+| "全队出击，把这个项目上线" | Pre-Planning→全L1→Multi-Build→Review Pipeline | 全流程 |
+| "派 2 个 Scout 调研数据库方案，然后 3 个 Builder 实现" | 按指定数量分配 + Category匹配 | Pattern 1+2 |
+| "上次的任务继续" | task_id 续接→Monitor→Continue | 中断恢复 |
 | "看下进度" | Dashboard 展示 | 看板 |
-| "用 agent 团队构建 X" | 全流程编排 | 大规模 |
+| "评估这个任务的复杂度" | 只分析：Intent Gate→Plan→展示DAG | 仅评估 |
+| "先调研一下微服务方案再决定" | Interview-Mode→访谈→Plan→Dispatch | Pattern 0 |
 
 ---
 
@@ -691,9 +679,19 @@ Alerts: None
 | 模糊/开放式 | Interview-Mode | "优化一下""做得更好""帮我设计" |
 
 ### 基础用法
+
+用户说一句，编排自动发生：
+
 ```
-用户："用agent团队构建一个博客系统"
-→ 自动进入 Intent→Plan→Dispatch→Monitor→Report 流程
+👤 "用agent团队构建一个博客系统"
+
+🤖 Intent Gate: "Implementation, Medium, 前后端独立可并行"
+🤖 Plan:
+   Wave 1: Scout:后端调研 + Scout:前端调研       ← 并行
+   Wave 2: Builder:后端实现 + Builder:前端实现    ← 并行  
+   Wave 3: Reviewer:后端审查 + Reviewer:前端审查  ← 并行
+   
+👤 用户确认 → Dispatch → Monitor(看板) → Report → Done
 ```
 
 ### 指定角色
