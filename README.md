@@ -2,7 +2,7 @@
 
 > 多智能体编排融合方案 — ATO × DevFleet × dmux × OMO 四源基因杂交
 
-[![version](https://img.shields.io/badge/version-1.2.0-blue)](SKILL.md)
+[![version](https://img.shields.io/badge/version-1.2.1-blue)](SKILL.md)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![workbuddy](https://img.shields.io/badge/platform-WorkBuddy-orange)](https://www.codebuddy.cn)
 
@@ -54,6 +54,7 @@ cp -r orchestra-fusion ~/.workbuddy/skills/
 | v1.0.0 | 2026-05-02 | 三源杂交初始版本 (ATO + DevFleet + dmux) |
 | v1.1.0 | 2026-05-02 | OMO 基因杂交 (10个新基因) |
 | v1.2.0 | 2026-05-02 | 自评优化 (Quick-Start + 决策树 + 速查卡) |
+| v1.2.1 | 2026-05-02 | 去重精简 (-115行/-15%) |
 
 ## 许可
 
