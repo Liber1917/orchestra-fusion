@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orchestra Fusion — 多智能体编排融合方案</title>
+<style>
+:root {
+  --bg: #0a0a1a;
+  --surface: rgba(255,255,255,0.04);
+  --glass: rgba(255,255,255,0.06);
+  --glass-hover: rgba(255,255,255,0.10);
+  --glass-active: rgba(255,255,255,0.14);
+  --border: rgba(255,255,255,0.10);
+  --text: #e8e8ed;
+  --muted: rgba(255,255,255,0.55);
+  --accent: #8B82F0;
+  --accent-glow: rgba(139,130,240,0.3);
+  --teal: #4DD9B0;
+  --teal-glow: rgba(77,217,176,0.25);
+  --amber: #F5B84D;
+  --red: #F06A6A;
+  --radius: 20px;
+  --radius-sm: 12px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Ambient background glow */
+body::before {
+  content: '';
+  position: fixed; top: -40%; left: -20%; width: 140%; height: 140%;
+  background: radial-gradient(ellipse 40% 50% at 30% 20%, rgba(139,130,240,0.12) 0%, transparent 70%),
+              radial-gradient(ellipse 35% 45% at 70% 60%, rgba(77,217,176,0.08) 0%, transparent 70%);
+  pointer-events: none; z-index:0;
+}
+
+.container { max-width: 880px; margin:0 auto; padding:0 24px; position:relative; z-index:1; }
+
+/* Nav */
+.nav { display:flex; justify-content:space-between; align-items:center; padding:24px 0; }
+.nav .logo { font-size:17px; font-weight:600; letter-spacing:-0.3px; color:var(--text); }
+.nav .links { display:flex; gap:24px; }
+.nav .links a { color:var(--muted); text-decoration:none; font-size:13px; font-weight:500; transition:color .2s; }
+.nav .links a:hover { color:var(--text); }
+
+/* Hero */
+.hero { padding:80px 0 64px; text-align:center; }
+.hero h1 {
+  font-size: 52px; font-weight:700; letter-spacing:-1.5px; line-height:1.1;
+  background: linear-gradient(135deg, #CECBF6 0%, #8B82F0 40%, #A78BFA 70%, #67E8F9 100%);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+}
+.hero .subtitle {
+  margin-top:16px; font-size:17px; color:var(--muted); max-width:520px; margin-left:auto; margin-right:auto;
+}
+.hero .cta-row { margin-top:36px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+.hero .cta-row .btn {
+  display:inline-flex; align-items:center; gap:8px; padding:12px 28px; border-radius:100px;
+  font-size:14px; font-weight:600; text-decoration:none; cursor:pointer; border:none; transition:all .25s;
+}
+.hero .btn-primary {
+  background: var(--accent); color:#fff;
+  box-shadow: 0 4px 24px var(--accent-glow);
+}
+.hero .btn-primary:hover { transform:translateY(-1px); box-shadow:0 6px 32px var(--accent-glow); }
+.hero .btn-outline {
+  background: transparent; color:var(--text); border:1px solid var(--border);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+.hero .btn-outline:hover { background:var(--glass-hover); border-color:rgba(255,255,255,0.2); }
+
+/* Glass Cards */
+.glass-card {
+  background: var(--glass); border:1px solid var(--border); border-radius:var(--radius);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  transition: all .3s;
+}
+.glass-card:hover { background:var(--glass-hover); border-color:rgba(255,255,255,0.15); transform:translateY(-2px); }
+.glass-card .inner { padding:28px; }
+
+/* Sections */
+.section { padding:64px 0; }
+.section-title {
+  font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:1px;
+  color:var(--accent); margin-bottom:12px;
+}
+.section-heading { font-size:28px; font-weight:600; letter-spacing:-0.5px; margin-bottom:8px; }
+.section-desc { font-size:15px; color:var(--muted); margin-bottom:32px; }
+
+/* Grid layouts */
+.grid-2 { display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:20px; }
+.grid-3 { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px,1fr)); gap:16px; }
+.grid-4 { display:grid; grid-template-columns:repeat(auto-fit, minmax(190px,1fr)); gap:14px; }
+
+/* Feature card */
+.feature-card .icon { font-size:28px; margin-bottom:12px; }
+.feature-card h3 { font-size:15px; font-weight:600; margin-bottom:6px; }
+.feature-card p { font-size:13px; color:var(--muted); line-height:1.5; }
+
+/* Gene badge */
+.gene-badge {
+  display:inline-flex; align-items:center; gap:6px; padding:6px 14px;
+  border-radius:100px; font-size:12px; font-weight:500;
+  background:var(--glass); border:1px solid var(--border);
+}
+
+/* Pipeline flow */
+.pipeline { display:flex; align-items:center; justify-content:center; gap:0; flex-wrap:wrap; padding:32px 0; }
+.pipeline .step {
+  padding:14px 22px; border-radius:var(--radius-sm);
+  background:var(--glass); border:1px solid var(--border);
+  font-size:14px; font-weight:600; text-align:center;
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+}
+.pipeline .arrow {
+  width:28px; height:1.5px; background:var(--accent); opacity:0.5; margin:0 4px; flex-shrink:0;
+}
+
+/* Code block */
+.code-block {
+  background: rgba(0,0,0,0.4); border:1px solid var(--border); border-radius:var(--radius-sm);
+  padding:20px; font-family:'SF Mono','Fira Code',monospace; font-size:13px; overflow-x:auto;
+  color:var(--muted); line-height:1.6;
+}
+.code-block .c1 { color:#67E8F9; }
+.code-block .c2 { color:#A78BFA; }
+.code-block .c3 { color:var(--teal); }
+.code-block .c4 { color:var(--muted); }
+
+/* Comparison table */
+.table-wrap { overflow-x:auto; }
+.table-wrap table { width:100%; border-collapse:collapse; font-size:13px; }
+.table-wrap th { text-align:left; padding:10px 14px; border-bottom:2px solid var(--border); color:var(--muted); font-weight:500; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; }
+.table-wrap td { padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.05); }
+.table-wrap tr:hover td { background:var(--glass); }
+
+/* Stats row */
+.stats-row { display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:16px; }
+.stat-card { text-align:center; padding:24px 16px; }
+.stat-card .value { font-size:36px; font-weight:700; letter-spacing:-1px; }
+.stat-card .label { font-size:12px; color:var(--muted); margin-top:4px; }
+
+/* Footer */
+.footer { padding:48px 0; text-align:center; border-top:1px solid var(--border); margin-top:32px; }
+.footer p { font-size:12px; color:var(--muted); }
+.footer a { color:var(--accent); text-decoration:none; }
+
+/* Responsive */
+@media (max-width:640px) {
+  .hero h1 { font-size:34px; }
+  .pipeline { gap:8px; }
+  .pipeline .arrow { display:none; }
+  .nav .links { display:none; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<!-- Nav -->
+<nav class="nav">
+  <span class="logo">Orchestra Fusion</span>
+  <div class="links">
+    <a href="#what">What</a>
+    <a href="#how">How</a>
+    <a href="#install">Install</a>
+    <a href="https://github.com/Liber1917/orchestra-fusion">GitHub</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero" id="what">
+  <h1>Orchestra Fusion</h1>
+  <p class="subtitle">
+    多智能体编排融合方案。四个顶级编排框架的基因杂交 —— 你说"用 agent 团队做 X"，剩下的自动完成。
+  </p>
+  <div class="cta-row">
+    <a href="#how" class="btn btn-primary">快速开始</a>
+    <a href="#install" class="btn btn-outline">安装指南</a>
+    <a href="https://github.com/Liber1917/orchestra-fusion" class="btn btn-outline">GitHub</a>
+  </div>
+</section>
+
+<!-- Pipeline -->
+<section>
+  <div class="pipeline">
+    <div class="step">🎯 Intent Gate</div>
+    <div class="arrow"></div>
+    <div class="step">📋 Plan + DAG</div>
+    <div class="arrow"></div>
+    <div class="step">🚀 Dispatch</div>
+    <div class="arrow"></div>
+    <div class="step">📊 Monitor</div>
+    <div class="arrow"></div>
+    <div class="step">📝 Report</div>
+  </div>
+</section>
+
+<!-- Stats -->
+<section class="stats-row">
+  <div class="stat-card glass-card"><div class="inner">
+    <div class="value" style="color:var(--accent)">4</div>
+    <div class="label">源框架基因</div>
+  </div></div>
+  <div class="stat-card glass-card"><div class="inner">
+    <div class="value" style="color:var(--teal)">6</div>
+    <div class="label">并行编排模式</div>
+  </div></div>
+  <div class="stat-card glass-card"><div class="inner">
+    <div class="value" style="color:var(--amber)">8</div>
+    <div class="label">Agent 角色类型</div>
+  </div></div>
+  <div class="stat-card glass-card"><div class="inner">
+    <div class="value" style="color:var(--teal)">79%</div>
+    <div class="label">质量评分 (Good)</div>
+  </div></div>
+</section>
+
+<!-- How it works -->
+<section class="section" id="how">
+  <div class="section-title">How It Works</div>
+  <div class="section-heading">一句话驱动全流程</div>
+  <div class="section-desc">Orchestra Fusion 会在后台自动分析任务、构建 DAG、分配角色、派发子代理、监控进度、汇总报告。</div>
+
+  <div class="code-block">
+<span class="c4">👤 用户:</span> <span class="c1">"用 agent 团队分析 vitfly 代码库并给出架构改进建议"</span>
+
+<span class="c4">🚪 Intent Gate:</span> <span class="c2">Mixed · Medium · 风险: 跨语言分析</span>
+<span class="c4">📋 Plan:</span>
+  <span class="c3">Wave 1:</span> Scout:调研代码结构  <span class="c3">Wave 2:</span> Builder:架构分析报告  <span class="c3">Wave 3:</span> Reviewer:审查
+<span class="c4">👤 用户确认 → 🚀 Dispatch → 📊 Monitor → 📝 Report → ✅ Done</span>
+  </div>
+
+  <div style="margin-top:24px">
+    <span class="gene-badge">ATO · 角色+审查</span>
+    <span class="gene-badge">DevFleet · DAG+看板</span>
+    <span class="gene-badge">dmux · 并行模式</span>
+    <span class="gene-badge">OMO · 熔断+并发</span>
+  </div>
+</section>
+
+<!-- Features -->
+<section class="section">
+  <div class="section-title">Capabilities</div>
+  <div class="section-heading">核心能力</div>
+  <div class="grid-3">
+    <div class="glass-card"><div class="inner feature-card">
+      <div class="icon">🎯</div>
+      <h3>意图门禁</h3>
+      <p>自动判断任务类型/复杂度/风险，简单任务降级直接执行，复杂任务启动团队编排。</p>
+    </div></div>
+    <div class="glass-card"><div class="inner feature-card">
+      <div class="icon">📋</div>
+      <h3>DAG 规划</h3>
+      <p>分析任务依赖，构建有向无环图。支持 auto_dispatch：前置完成自动触发后续。</p>
+    </div></div>
+    <div class="glass-card"><div class="inner feature-card">
+      <div class="icon">⚡</div>
+      <h3>7 种并行模式</h3>
+      <p>Research+Build / Multi-Build / Review Pipeline / Fix+Verify / Escalation / Interview-Mode / Autonomous Loop。</p>
+    </div></div>
+    <div class="glass-card"><div class="inner feature-card">
+      <div class="icon">🛡️</div>
+      <h3>生产级防御</h3>
+      <p>Slot 并发控制(5槽位/Key) · 熔断器(20次重复/4000次上限) · 陈旧检测(45/60min)。</p>
+    </div></div>
+    <div class="glass-card"><div class="inner feature-card">
+      <div class="icon">🚪</div>
+      <h3>7 道质量门禁</h3>
+      <p>Intent → Pre-Plan → Plan → Handoff → Review → Loop → Ship，每一步都有检查和人在回路。</p>
+    </div></div>
+    <div class="glass-card"><div class="inner feature-card">
+      <div class="icon">🌐</div>
+      <h3>三平台适配</h3>
+      <p>WorkBuddy 原生支持 · Claude Code 降级策略 · OpenCode 降级策略。</p>
+    </div></div>
+    <div class="glass-card"><div class="inner feature-card">
+      <div class="icon">🔄</div>
+      <h3>自主循环</h3>
+      <p>Report 后 Agent 自主判断是否继续。不是外部定时调度，而是评估结果后智能决策。</p>
+    </div></div>
+  </div>
+</section>
+
+<!-- Roles -->
+<section class="section">
+  <div class="section-title">Team</div>
+  <div class="section-heading">三层 Agent 架构</div>
+  <div class="section-desc">8 种角色按 3 层分工，各司其职。</div>
+  <div class="grid-3">
+    <div class="glass-card"><div class="inner" style="padding:20px">
+      <div style="font-size:11px;color:var(--accent);margin-bottom:8px;font-weight:600;letter-spacing:1px">L1 · 编排层</div>
+      <div style="font-size:14px;font-weight:600">Orchestrator</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">路由 · 追踪 · 汇报</div>
+      <div style="font-size:14px;font-weight:600;margin-top:10px">Planner</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">访谈 · DAG · 6段式</div>
+      <div style="font-size:14px;font-weight:600;margin-top:10px">Risk Analyst</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">风险识别</div>
+    </div></div>
+    <div class="glass-card"><div class="inner" style="padding:20px">
+      <div style="font-size:11px;color:var(--teal);margin-bottom:8px;font-weight:600;letter-spacing:1px">L2 · 专业层</div>
+      <div style="font-size:14px;font-weight:600">Scout</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">调研 · 搜索 · 收集</div>
+      <div style="font-size:14px;font-weight:600;margin-top:10px">Builder</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">代码 · 文档 · 配置</div>
+      <div style="font-size:14px;font-weight:600;margin-top:10px">Reviewer</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">独立质量验证</div>
+    </div></div>
+    <div class="glass-card"><div class="inner" style="padding:20px">
+      <div style="font-size:11px;color:var(--amber);margin-bottom:8px;font-weight:600;letter-spacing:1px">L3 · 执行层</div>
+      <div style="font-size:14px;font-weight:600">Worker</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">Category 匹配最优模型</div>
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Category</div>
+        <div style="font-size:12px;font-weight:500">visual-engineering · ultrabrain · deep · quick · writing · artistry</div>
+      </div>
+    </div></div>
+  </div>
+</section>
+
+<!-- Platform comparison -->
+<section class="section">
+  <div class="section-title">Platform</div>
+  <div class="section-heading">三平台运行</div>
+  <div class="section-desc">核心编排逻辑跨平台一致，工具调用层按平台适配。</div>
+  <div class="table-wrap glass-card" style="padding:0;overflow:hidden">
+    <div style="overflow-x:auto;padding:4px">
+    <table>
+      <tr><th>能力</th><th>WorkBuddy</th><th>Claude Code</th><th>OpenCode</th></tr>
+      <tr><td>Skill 加载</td><td>Skill() tool call</td><td>/command 或语义匹配</td><td>opencode skill load</td></tr>
+      <tr><td>子代理</td><td>Agent() tool</td><td>claude -p CLI</td><td>opencode agent spawn</td></tr>
+      <tr><td>任务队列</td><td>TaskCreate/List</td><td>.tasks/ JSON 文件</td><td>TOML plan</td></tr>
+      <tr><td>Slot 并发</td><td>✅ 原生</td><td>⚠️ 手动限流</td><td>⚠️ 手动限流</td></tr>
+      <tr><td>熔断器</td><td>✅ 原生</td><td>🛑 不支持</td><td>🛑 不支持</td></tr>
+      <tr><td>陈旧检测</td><td>✅ 原生</td><td>🛑 不支持</td><td>🛑 不支持</td></tr>
+    </table>
+    </div>
+  </div>
+</section>
+
+<!-- Install -->
+<section class="section" id="install">
+  <div class="section-title">Install</div>
+  <div class="section-heading">安装</div>
+  <div class="section-desc">复制到 WorkBuddy 技能目录即可生效。</div>
+  <div class="code-block">
+<span class="c4"># 克隆仓库</span>
+git clone https://github.com/Liber1917/orchestra-fusion.git
+
+<span class="c4"># 复制到 WorkBuddy 用户技能目录</span>
+cp -r orchestra-fusion ~/.workbuddy/skills/
+
+<span class="c4"># 使用 — 直接对话即可触发</span>
+<span class="c1">"用 agent 团队帮我重构认证模块"</span>
+<span class="c1">"全队出击，把这个项目从零搭建到上线"</span>
+<span class="c1">"同时写 A、B、C 三个模块的单元测试"</span>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+  <p>
+    <a href="https://github.com/Liber1917/orchestra-fusion">GitHub</a> · 
+    <a href="https://github.com/Liber1917/orchestra-fusion/blob/master/SKILL.md">SKILL.md</a> · 
+    <a href="https://github.com/Liber1917/orchestra-fusion/blob/master/references">证据文件</a>
+  </p>
+  <p style="margin-top:8px">Orchestra Fusion v1.6.0 · Agent Team Orchestration × DevFleet × dmux × OMO · MIT</p>
+</footer>
+
+</div>
+
+</body>
+</html>
