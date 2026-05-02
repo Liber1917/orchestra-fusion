@@ -3,7 +3,7 @@ name: orchestra-fusion
 description: "多智能体编排融合方案。融合四个顶尖编排框架的基因：Agent Team Orchestration 的角色生命周期 + Claude DevFleet 的 DAG/auto_dispatch + dmux-workflows 的并行模式库 + oh-my-opencode 的 Slot并发/Intent Gate/熔断器。Use when 用户说\"编排多个agent\"\"并行执行\"\"构建多智能体流水线\"\"设计agent团队\"\"orchestrate agents\"\"multi-agent workflow\"\"agent pipeline\"\"全队出击\"\"ultrawork\"。"
 description_zh: "多智能体编排融合方案 — ATO × DevFleet × dmux × OMO 四源基因杂交"
 description_en: "Multi-agent orchestration fusion — hybrid of ATO, DevFleet, dmux, and OMO patterns"
-version: 1.5.3
+version: 1.5.4
 agent_created: true
 allowed-tools: Read,Write,Edit,Bash,Glob,Grep,TaskCreate,TaskGet,TaskUpdate,TaskList,SendMessage
 ---
@@ -376,8 +376,7 @@ Orchestrator 必须介入做决策
    - 任务完成 → 检查 auto_dispatch，派发后续
    - 任务阻塞 → 5分钟内无进展则升级到 Orchestrator
    - 审查不通过 → 返回 Builder，触发 Fix+Verify 循环
-   - Stale Detection: 45min无活动→中断 | 60min无更新→取消
-   - Circuit Breaker: 连续20次重复调用→告警 | 4000次总调用→强制取消
+   - 熔断/陈旧异常 → 详见下方「并发控制」章节的 Circuit Breaker + Stale Detection
 4. 向用户汇报进展（Dashboard 形式）
 
 关键：Orchestrator 在 Monitor 阶段不执行建造工作
