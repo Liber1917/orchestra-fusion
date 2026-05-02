@@ -2,3 +2,4 @@ timestamp	round	skill	phase	source_skills	action	genes_added	score_delta	note
 2026-05-02T14:39	v1.0.0	orchestra-fusion	create	ATO+DevFleet+dmux	hybridize	roles,lifecycle,dag,auto_dispatch,5-parallel-patterns	baseline	三源杂交初始版本
 2026-05-02T14:50	v1.1.0	orchestra-fusion	evolve	+oh-my-opencode	hybridize	intent-gate,slot-concurrency,circuit-breaker,stale-detection,pre-planning,tool-restrictions,category-dispatch,interview-mode,6-section-plan,unstable-agent	+10 estimated	OMO基因杂交第二轮
 2026-05-02T16:25	v1.2.0	orchestra-fusion	optimize	self-evaluation	darwin-round3	quick-start,scene-decision-tree,cheat-sheet	+5 estimated (D6:2.5→4.0)	自评优化：Quick-Start + 决策树 + 速查卡
+2026-05-02T17:35	v1.2.1	orchestra-fusion	deduplicate	quality-report	deduplicate	—	+6 estimated (79%→~88%)	去重精简：移除设计灵感、合并异常处理、约束14→9条、删完整示例(-115行)

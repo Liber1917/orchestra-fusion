@@ -3,7 +3,7 @@ name: orchestra-fusion
 description: "多智能体编排融合方案。融合四个顶尖编排框架的基因：Agent Team Orchestration 的角色生命周期 + Claude DevFleet 的 DAG/auto_dispatch + dmux-workflows 的并行模式库 + oh-my-opencode 的 Slot并发/Intent Gate/熔断器。Use when 用户说\"编排多个agent\"\"并行执行\"\"构建多智能体流水线\"\"设计agent团队\"\"orchestrate agents\"\"multi-agent workflow\"\"agent pipeline\"\"全队出击\"\"ultrawork\"。"
 description_zh: "多智能体编排融合方案 — ATO × DevFleet × dmux × OMO 四源基因杂交"
 description_en: "Multi-agent orchestration fusion — hybrid of ATO, DevFleet, dmux, and OMO patterns"
-version: 1.2.0
+version: 1.2.1
 agent_created: true
 allowed-tools: Read,Write,Edit,Bash,Glob,Grep,TaskCreate,TaskGet,TaskUpdate,TaskList,SendMessage
 ---
@@ -52,20 +52,18 @@ allowed-tools: Read,Write,Edit,Bash,Glob,Grep,TaskCreate,TaskGet,TaskUpdate,Task
 
 ## 设计哲学
 
-本方案不是四个技能的生硬拼接，而是提取各自最强基因后的有机杂交：
+本方案提取四个顶尖编排框架的最强基因，有机杂交而非生硬拼接：
 
-| 来源技能 | 贡献基因 | 在本方案中的角色 |
+| 来源技能 | 贡献基因 | 在方案中的角色 |
 |---------|---------|---------------|
-| **Agent Team Orchestration** | 四角色分工、任务生命周期、Handoff协议、强制审查门禁 | 团队骨架 |
-| **Claude DevFleet** | DAG依赖规划、auto_dispatch、工作树隔离、看板监控 | 执行引擎 |
-| **dmux-workflows** | 5种并行模式、merge策略、工作树隔离 | 并行策略库 |
-| **oh-my-opencode** | Intent Gate、Slot-Based并发+熔断器、Pre-Planning双保险、Tool Restrictions、Stale Detection | 防御系统 + 规划增强 |
+| **Agent Team Orchestration** | 角色分工、任务生命周期、Handoff、强制审查 | 团队骨架 |
+| **Claude DevFleet** | DAG依赖规划、auto_dispatch、工作树隔离、看板 | 执行引擎 |
+| **dmux-workflows** | 6种并行模式、merge策略 | 并行策略库 |
+| **oh-my-opencode** | Intent Gate、Slot并发+熔断、Pre-Planning、陈旧检测 | 防御+规划增强 |
 
-融合后形成的新能力：
-- 四个源技能各自缺失的部分被补全
-- 单技能无法独立完成的「大规模多智能体编排」现在可行
-- 防御深度达到生产级：熔断 + 陈旧检测 + 不稳定Agent处理
-- 同时保留每个源技能的降级路径
+> "这不是四个技能的拼接，而是提取各自最优秀的基因，杂交出一个新物种。" — Orchestra Fusion
+
+四个源方案均可作为降级路径——当复杂度不需要时，退化到更适合的方案。
 
 ---
 
@@ -253,9 +251,7 @@ Planner 访谈流程：
 **触发条件：** 用户请求包含模糊词（"好的""高性能""优化一下"）且无明确技术约束时。
 **必须征得用户同意后才进入正式Plan阶段。**
 
-以下是原有的 5 种并行模式：
-
-借鉴 dmux 的 5 种并行模式，适配到本方案的角色模型。
+以下 5 种并行模式借鉴 dmux，适配到本方案的角色模型：
 
 ### Pattern 1: Research + Build 流水线
 
@@ -364,6 +360,18 @@ Orchestrator 必须介入做决策
 4. 向用户汇报进展（Dashboard 形式）
 
 关键：Orchestrator 在 Monitor 阶段不执行建造工作
+```
+
+**常见异常处理：**
+
+| 异常 | 处理方式 |
+|------|---------|
+| Agent 沉默无进展 | 5min ping → 无响应标记 Blocked；45min无活动→中断；60min→取消 |
+| Builder 产出物空洞 | Reviewer 拒绝 → 详细反馈 → In_Progress |
+| 审查连续 3 次不通过 | 升级为 Escalation → Orchestrator 介入决策 |
+| git merge 冲突 | 人工解决或选择保留版本 |
+| 并发超出上限 | 自动 FIFO 排队 |
+| 用户中断 | 保存当前状态，已完成任务保留 |
 ```
 
 ### Report 阶段
@@ -533,108 +541,6 @@ Alerts: None
 
 ---
 
-## 异常处理与回滚
-
-| 异常 | 处理方式 |
-|------|---------|
-| Agent 超过 5 分钟无进展 | Orchestrator 发 ping，无响应则标记 Blocked |
-| Builder 产出物空洞 | Reviewer 拒绝 → 返回详细反馈 → In_Progress |
-| 审查连续 3 次不通过 | 升级为 Escalation 模式 → Orchestrator 介入决策 |
-| git merge 冲突 | 人工解决或 Orchestrator 选择保留版本 |
-| 并发超出上限 | 自动排队，先到先服务 |
-| 用户中断 | 保存当前状态，所有已完成任务保留 |
-
-**回滚策略：** 每个 Builder 在自己的 git 分支/工作树上工作。如果有问题，merge 之前可以安全丢弃分支。
-
----
-
-## 完整示例
-
-### 场景："构建一个高性能博客系统，需要支持百万级并发"
-
-**Intent Gate（强制）：**
-
-```
-Orchestrator verbalize：
-  "这是一个 Implementation 任务，规模较大（Complex）。
-   风险点：百万级并发可能需要架构选型（缓存层、读写分离、CDN）。
-   建议：先启动 Pre-Planning（Risk Analyst + Plan Validator）。"
-```
-
-**Pre-Planning（Complex触发）：**
-
-```
-Risk Analyst 输出：
-  ⚠️ 风险1: 数据库选型 — PostgreSQL单机不足以支撑百万并发
-  ⚠️ 风险2: 缓存策略 — 需要Redis集群 + CDN
-  ⚠️ 风险3: API设计 — REST vs GraphQL 在高并发下差异显著
-  ⚠️ 风险4: 前端渲染 — SSR可能在峰值耗尽服务器
-
-Plan Validator 输出：
-  ✅ 计划结构完整
-  ⚠️ 建议补充：负载测试方案、降级策略、监控告警
-```
-
-**Plan 阶段（6段式）：**
-
-```
-DAG:
-  Scout:架构调研 ──→ Builder:后端API ──┬──→ Reviewer:API审查
-                    │                  ├──→ Reviewer:负载测试
-                    │                  │
-  Scout:前端调研 ──→ Builder:前端SSR ──┼──→ Reviewer:前端审查
-                    │                  │
-                    └──→ Builder:缓存层 ─┘
-
-Category 分配:
-  - Scout任务 → fast-search
-  - Builder:后端 → ultrabrain (重逻辑)
-  - Builder:前端 → visual-engineering
-  - Builder:缓存 → deep-work
-  - Reviewer → general
-```
-
-展示6段式计划 → 用户确认 ✓
-
-**Dispatch 阶段：**
-
-```
-Wave 1（Slot-Based 并发派发）：
-  Key: fast-search → Scout:架构调研 + Scout:前端调研 (2/5 slots)
-  
-Wave 2（auto_dispatch）：
-  Key: ultrabrain → Builder:后端API (1/5)
-  Key: visual-engineering → Builder:前端SSR (1/5)
-  Key: deep-work → Builder:缓存层 (1/5)
-  总并发: 3/15 slots across 3 keys
-
-Wave 3（auto_dispatch）：
-  Key: general → Reviewer:API审查 + Reviewer:前端审查 + Reviewer:负载测试 (3/5)
-
-Monitor 期间：
-  🔔 后端API Builder 30分钟无更新 → Orchestrator 发ping → 恢复
-  ⚠️ 前端SSR Builder 连续15次重复npm install → Circuit Breaker告警 → 人工介入
-```
-
-**Report：**
-
-```
-═══ Mission Complete ═══
-Tasks: 8/8 done | Time: 42min | Interrupts: 1 | Breaker trips: 1
-
-Artifacts:
-  /src/api/          — REST API (PostgreSQL + Redis + 读写分离)
-  /src/frontend/     — Next.js SSR + CDN
-  /src/cache/        — Redis Cluster 配置
-  /tests/load/       — k6 负载测试脚本
-  /docs/arch.md      — 架构决策记录 (ADR)
-
-Issues resolved: CDN配置在Circuit Breaker告警后手动修正
-Status: ✅ Ready to ship
-```
-
----
-
 ## 触发词
 
 中英文触发：
@@ -649,20 +555,15 @@ Status: ✅ Ready to ship
 
 ## 约束规则
 
-1. **Orchestrator 不建造** — 编排者只路由和追踪，不亲自执行
-2. **Intent Gate 强制执行** — 分类前必须 verbalize 路由判断
-3. **每个产出物必须审查** — 跳过审查 3 次 = 质量漂移
-4. **Plan 必须用户确认** — 不确认不派发（Complex任务需 Pre-Planning 双审查）
-5. **Agent 沉默 = 卡住** — 5min无回复→ping；45min无活动→中断；60min无更新→取消
-6. **Slot-Based 并发** — 每Key最多5并发，FIFO排队
-7. **Circuit Breaker 熔断** — 20次重复调用→告警；4000次总调用→取消；Fix+Verify超过3轮→升级
-8. **工作树隔离** — 重叠文件必须用不同 worktree
-9. **可回滚** — 每个 Builder 在独立分支工作
-10. **Handoff 必须包含 5 要素** — 否则退回
-11. **Reviewer 必须独立** — 不能审查自己建造的产出物
-12. **L1 层不互派生** — Planner/Risk/Validator 不能派生其他 L1 角色（防递归规划循环）
-13. **Tool Restriction 生效** — Risk Analyst/Plan Validator/Scout 禁止写操作
-14. **用户最终确认** — Ship Gate 不过不交付
+1. **Orchestrator 不建造** — 只路由追踪，不亲自执行
+2. **Intent Gate 强制** — 分类前必须 verbalize（类型/复杂度/风险）
+3. **Plan 用户确认** — 不确认不派发；Complex 任务需 Pre-Planning 双审查
+4. **每产出物必审** — 跳过审查 3 次 = 质量漂移；Reviewer 不能审自己造的
+5. **Agent 沉默即卡住** — 5min ping → Blocked；45min 无活动 → 中断；60min → 取消
+6. **熔断生效** — 20 次重复→告警；4000 次→取消；Fix+Verify 超 3 轮→升级
+7. **L1 不互派生** — Planner/Risk/Validator 不能派生其他 L1 角色（防递归循环）
+8. **Tool Restriction** — Risk Analyst / Plan Validator / Scout 禁止 Write 操作
+9. **Ship Gate 最终确认** — 用户不过不交付
 
 ---
 
@@ -757,18 +658,3 @@ Status: ✅ Ready to ship
 | 已有 OpenCode + OMO 环境 | oh-my-opencode |
 | **大规模多Agent编排** | **Orchestra Fusion** ← 本方案 |
 
-四个源方案都可以作为本方案的降级路径：当并发或团队复杂度不需要时，退化到更适合的方案。
-
----
-
-## 设计灵感
-
-> 这不是三个技能的拼接，而是提取它们各自最优秀的基因，杂交出一个新的物种。
->
-> — Orchestra Fusion
-
-- 🧬 **Agent Team Orchestration** → 角色骨架 + 生命周期血脉
-- 🧬 **Claude DevFleet** → DAG 神经 + auto_dispatch 反射
-- 🧬 **dmux-workflows** → 并行肌肉 + 模式记忆
-- 🧬 **oh-my-opencode** → Slot-Based 免疫系统 + Intent Gate 前额叶 + Circuit Breaker 痛觉反射
-- 🧬 **darwin-skill** → 本方案本身的诞生 + 进化方法论
