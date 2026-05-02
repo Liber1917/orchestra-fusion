@@ -2,7 +2,7 @@
 
 > 多智能体编排融合方案 — ATO × DevFleet × dmux × OMO 四源基因杂交
 
-[![version](https://img.shields.io/badge/version-1.3.0-blue)](SKILL.md)
+[![version](https://img.shields.io/badge/version-1.3.1-blue)](SKILL.md)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![workbuddy](https://img.shields.io/badge/platform-WorkBuddy-orange)](https://www.codebuddy.cn)
 

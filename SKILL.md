@@ -3,7 +3,7 @@ name: orchestra-fusion
 description: "多智能体编排融合方案。融合四个顶尖编排框架的基因：Agent Team Orchestration 的角色生命周期 + Claude DevFleet 的 DAG/auto_dispatch + dmux-workflows 的并行模式库 + oh-my-opencode 的 Slot并发/Intent Gate/熔断器。Use when 用户说\"编排多个agent\"\"并行执行\"\"构建多智能体流水线\"\"设计agent团队\"\"orchestrate agents\"\"multi-agent workflow\"\"agent pipeline\"\"全队出击\"\"ultrawork\"。"
 description_zh: "多智能体编排融合方案 — ATO × DevFleet × dmux × OMO 四源基因杂交"
 description_en: "Multi-agent orchestration fusion — hybrid of ATO, DevFleet, dmux, and OMO patterns"
-version: 1.3.0
+version: 1.3.1
 agent_created: true
 allowed-tools: Read,Write,Edit,Bash,Glob,Grep,TaskCreate,TaskGet,TaskUpdate,TaskList,SendMessage
 ---
@@ -566,11 +566,13 @@ Alerts: None
 |---------|-------------|---------|
 | "帮我用 agent 团队重构认证模块" | Intent→Plan→DAG→Dispatch→Monitor | Pattern 1+2 |
 | "先调研一下微服务方案再决定" | Interview-Mode→访谈→Plan→Dispatch | Pattern 0 |
-| "全队出击，把这个项目上线" | Pre-Planning→全L1角色→Multi-Build→Review Pipeline | 全流程 |
+| "全队出击，把这个项目上线" | Pre-Planning→全L1→Multi-Build→Review Pipeline | 全流程 |
 | "改个登录页的标题" | 直接执行（不启用编排） | 降级 |
-| "评估这个任务的复杂度" | 只分析不执行：Intent Gate→Plan→展示DAG | 仅评估 |
+| "评估这个任务的复杂度" | 只分析：Intent Gate→Plan→展示DAG | 仅评估 |
 | "上次的任务继续" | task_id 续接→Monitor→Continue | 中断恢复 |
-| "同时写 A模块、B模块、C模块的单元测试" | DAG→Multi-Build并行→Slot并发3/5 | Pattern 2 |
+| "同时写 A、B、C模块的单元测试" | DAG→Multi-Build→Slot并发3/5 | Pattern 2 |
+| "看下进度" | Dashboard 展示 | 看板 |
+| "用 agent 团队构建 X" | 全流程编排 | 大规模 |
 
 ---
 
@@ -652,17 +654,6 @@ Alerts: None
 用户："只用一个agent做这个"
 → 退化到单Agent执行，不需要团队编排
 ```
-
-### 📋 速查卡片
-
-| 想要什么 | 说这句话 |
-|---------|---------|
-| 大规模多Agent编排 | "用 agent 团队构建 X" |
-| 全并行最大火力 | "全队出击" / "ultrawork" |
-| 模糊需求先访谈 | "先聊聊方案再决定" |
-| 只分析不执行 | "分析任务适合什么模式" |
-| 看当前进度 | "看板" / "dashboard" |
-| 中断恢复 | "继续上次的任务" |
 
 ---
 
