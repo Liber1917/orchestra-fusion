@@ -3,7 +3,7 @@ name: orchestra-fusion
 description: "多智能体编排融合方案。融合四个顶尖编排框架的基因：Agent Team Orchestration 的角色生命周期 + Claude DevFleet 的 DAG/auto_dispatch + dmux-workflows 的并行模式库 + oh-my-opencode 的 Slot并发/Intent Gate/熔断器。Use when 用户说\"编排多个agent\"\"并行执行\"\"构建多智能体流水线\"\"设计agent团队\"\"orchestrate agents\"\"multi-agent workflow\"\"agent pipeline\"\"全队出击\"\"ultrawork\"。"
 description_zh: "多智能体编排融合方案 — ATO × DevFleet × dmux × OMO 四源基因杂交"
 description_en: "Multi-agent orchestration fusion — hybrid of ATO, DevFleet, dmux, and OMO patterns"
-version: 1.5.0
+version: 1.5.1
 agent_created: true
 allowed-tools: Read,Write,Edit,Bash,Glob,Grep,TaskCreate,TaskGet,TaskUpdate,TaskList,SendMessage
 ---
@@ -427,15 +427,18 @@ Orchestrator 必须介入做决策
 
 ## 输入异常处理
 
-| 异常输入 | 处理方式 |
-|---------|---------|
-| **空输入 / 无请求** | 不触发编排，正常等待 |
-| **格式错误**（乱码/非文本） | Intent Gate 捕捉 → 要求用户重新表述 |
-| **超出范围**（如"帮我发射火箭"） | Intent Gate 识别不可执行 → 建议缩小范围或拒绝 |
-| **Token 超出**（超大请求） | 自动拆分为子任务 → 触发 Pattern 0 访谈澄清 |
-| **引用不存在的文件/模块** | Scout 阶段检测 404 → 返回错误路径 → 要求修正 |
-| **循环依赖**（A依赖B，B依赖A） | Plan 阶段 DAG 校验 → 拒绝 circular dependency → 要求用户分解 |
-| **并发饱和**（所有 Key 全满） | 自动 FIFO 排队 → 告警用户"系统繁忙，任务已排队" |
+> 以下为各类异常输入的具体处理策略，含决策流程和用户通知模板。
+
+| 异常输入 | 决策流程 | 用户通知示例 |
+|---------|---------|------------|
+| **空输入 / 无请求** | 1) 检测 prompt 为空 → 2) 不触发编排 → 3) 正常等待下一条 | `(静默，不回复)` |
+| **格式错误**（乱码/非文本） | 1) Intent Gate 解析失败 → 2) 判定为不可分类 → 3) 要求重新表述 | `"无法理解您的请求。请用自然语言描述您想完成的任务。"` |
+| **超出范围**（如"帮我发射火箭"） | 1) Intent Gate 识别无匹配 category → 2) 标记为超出能力 → 3) 建议缩小范围 | `"这个任务超出了当前编排框架的能力范围。建议拆分为更小、更具体的子任务。例如：'帮我设计火箭的导航系统架构'。"` |
+| **Token 超出**（超大请求） | 1) 预估 token > 安全阈值 → 2) 不直接拆分 → 3) 触发 Pattern 0 访谈澄清 | `"您的请求范围较大。让我们先确认几个关键点：[启动访谈模式]..."` |
+| **引用不存在的文件/模块** | 1) Scout 搜索发现 404 → 2) 返回精确错误路径 → 3) 要求用户修正 | `"未找到文件 '/path/to/missing.py'。请确认文件路径是否正确，或提供替代路径。"` |
+| **循环依赖**（A依赖B，B依赖A） | 1) Plan 阶段 DAG 校验检测到环 → 2) 拒绝构建 → 3) 要求分解 | `"检测到循环依赖：Task-A 依赖 Task-B，同时 Task-B 依赖 Task-A。请将这两个任务合并为一个，或重新定义依赖关系。"` |
+| **并发饱和**（所有 Key 全满） | 1) 新任务申请槽位 → 2) FIFO 排队 → 3) 告警用户 | `"系统繁忙：当前 15/15 槽位已满，您的任务已加入队列（位置 #3）。预计等待 2-5 分钟。"` |
+| **冲突的关键词**（同时含"全队出击"+"只用一个agent"） | 1) 后出现的指令覆盖前者 → 2) 明确说明歧义 → 3) 要求确认 | `"检测到冲突指令：'全队出击'（多agent）和'只用一个agent'。以最后一条为准，将使用单Agent模式。是否确认？"` |
 
 ---
 
@@ -589,13 +592,30 @@ Alerts: None
 
 ## 触发词
 
-中英文触发：
-- "编排多个agent" / "并行执行" / "构建多智能体流水线"
-- "设计agent团队" / "多agent协作" / "agent分工"
-- "orchestrate agents" / "multi-agent workflow"
-- "agent pipeline" / "parallel agents"
-- "全队出击" / "ultrawork" / "所有agent一起上"
-- "启动熔断" / "slot并发" / "意图门禁" / "interview plan"
+### 中文触发（按强度分级）
+
+**强触发（明确要求编排）：**
+- "编排多个agent" / "用agent团队" / "派agent" / "启动agent团队"
+- "全队出击" / "ultrawork" / "所有agent一起上" / "全部agent出动"
+- "并行执行" / "同时跑" / "一起做" / "分头执行"
+- "构建多智能体流水线" / "设计agent团队" / "多agent协作"
+
+**中等触发（隐含编排需求）：**
+- "agent分工" / "拆开做" / "分成几个部分"
+- "让agent先调研再实现" / "调研+建造"
+- "slot并发" / "意图门禁" / "interview plan"
+- "先分析再决定方案" / "调研后再动手"
+
+**弱触发（可能触发，视上下文）：**
+- "设计一个系统" / "构建一个项目"（仅当涉及多模块时）
+- "帮我重构"（仅当明确涉及多文件/多模块时）
+- "启动熔断" / "看下进度"（编排进行中时）
+
+### 英文触发
+
+- "orchestrate agents" / "multi-agent workflow" / "agent pipeline"
+- "parallel agents" / "dispatch agents" / "agent team"
+- "split this work" / "divide and conquer with agents"
 
 ### 触发场景示例
 
