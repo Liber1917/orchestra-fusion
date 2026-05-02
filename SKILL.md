@@ -3,7 +3,7 @@ name: orchestra-fusion
 description: "多智能体编排融合方案。融合四个顶尖编排框架的基因：Agent Team Orchestration 的角色生命周期 + Claude DevFleet 的 DAG/auto_dispatch + dmux-workflows 的并行模式库 + oh-my-opencode 的 Slot并发/Intent Gate/熔断器。Use when 用户说\"编排多个agent\"\"并行执行\"\"构建多智能体流水线\"\"设计agent团队\"\"orchestrate agents\"\"multi-agent workflow\"\"agent pipeline\"\"全队出击\"\"ultrawork\"。"
 description_zh: "多智能体编排融合方案 — ATO × DevFleet × dmux × OMO 四源基因杂交"
 description_en: "Multi-agent orchestration fusion — hybrid of ATO, DevFleet, dmux, and OMO patterns"
-version: 1.5.4
+version: 1.6.0
 agent_created: true
 allowed-tools: Read,Write,Edit,Bash,Glob,Grep,TaskCreate,TaskGet,TaskUpdate,TaskList,SendMessage
 ---
@@ -313,6 +313,34 @@ Orchestrator 必须介入做决策
 
 ---
 
+### Pattern 6: Autonomous Loop — 自主循环
+
+```
+Report("建议继续") ──→ Loop Gate 判断 ──→ 满足? ──→ 新 Intent Gate(携带上轮上下文)
+    ↑                                                              │
+    └────────────────── (Agent 自主循环, 最多 N 轮) ──────────────────┘
+
+Loop Gate 触发条件（任一满足即继续）：
+  1. Report 含未解决的 suggestions（如 "数据库模块未覆盖"）
+  2. 存在 Failed 任务但值得重试
+  3. 用户明确要求 "持续模式" / "watch mode" / "loop"
+
+Loop Gate 终止条件（任一满足即停止）：
+  1. 达到最大轮数（默认 3, 可配置）
+  2. Report 中所有 suggestions 已解决
+  3. 用户说 "停止"
+  4. 连续 2 轮无实质性产出变化
+
+跨轮状态: 每轮生成 .tasks/run-{N}.json，下轮 Intent Gate 自动加载上轮上下文
+```
+
+> **为什么不在平台层做调度？** WorkBuddy 的 `automation` 和 Claude Code 的 `/loop` 是外部定时触发，不知道"该不该继续"。Autonomous Loop 让 Agent 自己判断——不是定时重跑同一个 prompt，而是评估上一轮结果后自主决定是否进入下一轮。
+
+适用：需要迭代打磨的任务、代码库长期巡检、持续集成中的智能重试。
+示例：论文反复修改直到审查通过、每日代码扫描直到零漏洞。
+
+*[管线定位: Parallel Modes → Dispatch 阶段策略选择]*
+
 ## 完整工作流
 
 ### Plan 阶段
@@ -416,8 +444,10 @@ Orchestrator 必须介入做决策
 3. 决策建议：
    - 是否可交付？还是需要下一轮？
    - 哪些失败需要人工介入？
+   - 是否有未解决项应触发 Autonomous Loop (Pattern 6)？
 
-4. 用户最终确认 → Ship 或 Rework
+4. 🚪 Loop Gate — 自主判断是否继续循环（见 Pattern 6）
+5. 用户最终确认 → Ship / Rework / Continue(Loop)
 ```
 
 *[管线定位: Report 阶段 → 所有任务终态后的汇总交付]*
@@ -565,6 +595,7 @@ Orchestrator 在 Dispatch 阶段根据任务特征自动选择 Category。
 | 🚪 Plan Gate | Plan→Dispatch | 用户确认6段式计划 | DevFleet |
 | 🚪 Handoff Gate | Builder→Reviewer | Handoff 5要素是否齐全 | ATO |
 | 🚪 Review Gate | Review→Done | 至少1个独立Reviewer通过 | ATO |
+| 🚪 Loop Gate | Report→(Intent) | 满足触发条件且未达终止条件时继续 | 🆕 独创 |
 | 🚪 Ship Gate | Report→Done | 用户最终确认 | 独创 |
 
 **审查标准：**
@@ -624,6 +655,7 @@ Alerts: None
 - "让agent先调研再实现" / "调研+建造"
 - "slot并发" / "意图门禁" / "interview plan"
 - "先分析再决定方案" / "调研后再动手"
+- "持续模式" / "watch mode" / "loop" / "自动循环" / "迭代到达标"
 
 **弱触发（可能触发，视上下文）：**
 - "设计一个系统" / "构建一个项目"（仅当涉及多模块时）
@@ -648,6 +680,8 @@ Alerts: None
 | "看下进度" | Dashboard 展示 | 看板 |
 | "评估这个任务的复杂度" | 只分析：Intent Gate→Plan→展示DAG | 仅评估 |
 | "先调研一下微服务方案再决定" | Interview-Mode→访谈→Plan→Dispatch | Pattern 0 |
+| "持续扫描代码直到零漏洞" | Intent→Plan→Dispatch→Monitor→Report→Loop→... | Pattern 6 |
+| "watch mode: 每次 push 后审查" | Intent→...→Loop Gate→新 Intent→... | Pattern 6 |
 
 ---
 
@@ -693,6 +727,8 @@ Alerts: None
   ├─ 需要反复打磨？ ──→ ✅ Pattern 4: Fix+Verify 循环
   │
   ├─ 遇到阻塞需要决策？ ──→ ✅ Pattern 5: Escalation 升级
+  │
+  ├─ 需要多轮迭代直到达标？ ──→ ✅ Pattern 6: Autonomous Loop
   │
   ├─ 需求模糊需要澄清？ ──→ ✅ Pattern 0: Interview-Mode 访谈
   │
