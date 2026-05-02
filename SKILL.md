@@ -3,7 +3,7 @@ name: orchestra-fusion
 description: "多智能体编排融合方案。融合四个顶尖编排框架的基因：Agent Team Orchestration 的角色生命周期 + Claude DevFleet 的 DAG/auto_dispatch + dmux-workflows 的并行模式库 + oh-my-opencode 的 Slot并发/Intent Gate/熔断器。Use when 用户说\"编排多个agent\"\"并行执行\"\"构建多智能体流水线\"\"设计agent团队\"\"orchestrate agents\"\"multi-agent workflow\"\"agent pipeline\"\"全队出击\"\"ultrawork\"。"
 description_zh: "多智能体编排融合方案 — ATO × DevFleet × dmux × OMO 四源基因杂交"
 description_en: "Multi-agent orchestration fusion — hybrid of ATO, DevFleet, dmux, and OMO patterns"
-version: 1.4.5
+version: 1.5.0
 agent_created: true
 allowed-tools: Read,Write,Edit,Bash,Glob,Grep,TaskCreate,TaskGet,TaskUpdate,TaskList,SendMessage
 ---
@@ -379,14 +379,15 @@ Orchestrator 必须介入做决策
 
 **常见异常处理：**
 
-| 异常 | 处理方式 |
-|------|---------|
-| Agent 沉默无进展 | 5min ping → 无响应标记 Blocked；45min无活动→中断；60min→取消 |
-| Builder 产出物空洞 | Reviewer 拒绝 → 详细反馈 → In_Progress |
-| 审查连续 3 次不通过 | 升级为 Escalation → Orchestrator 介入决策 |
-| git merge 冲突 | 人工解决或选择保留版本 |
-| 并发超出上限 | 自动 FIFO 排队 |
-| 用户中断 | 保存当前状态，已完成任务保留 |
+| 异常 | 处理方式 | 具体示例 |
+|------|---------|---------|
+| Agent 沉默无进展 | 5min ping → 无响应标记 Blocked；45min无活动→中断；60min→取消 | "Scout-1 5分钟内无工具调用 → 发送 ping 消息 → 仍无响应 → 标记 Blocked，通知用户 'Scout-1 已 5 分钟无响应，已暂停，是否继续？'" |
+| Builder 产出物空洞 | Reviewer 拒绝 → 详细反馈 → In_Progress | "Builder-2 产出 report.md 只有 3 行 → Reviewer 反馈: '报告缺少第2节代码结构分析和第3节依赖关系图' → 返回 In_Progress" |
+| 审查连续 3 次不通过 | 升级为 Escalation → Orchestrator 介入决策 | "Reviewer 三次拒绝同一产出 → 触发 Escalation → Orchestrator: '此任务已3次未通过审查，评估是否换Builder、缩小范围、或降级为手动完成'" |
+| git merge 冲突 | 人工解决或选择保留版本 | "Builder-A 和 Builder-B 同时修改 models/model.py → merge 冲突 → 暂停两任务 → 通知用户选择版本 → 手动 merge 后继续" |
+| 并发超出上限 | 自动 FIFO 排队 | "anthropic/claude-opus 已达 5/5 槽位 → Task-7 进入排队 → 用户看到 '3 tasks waiting' → 槽位释放后自动唤醒" |
+| 用户中断 | 保存当前状态，已完成任务保留 | "用户输入 'stop' → 所有 in_progress 任务标记 paused → 已完成任务保留 Done 状态 → 下次通过 task_id 续接" |
+| 子代理异常退出 | 检查退出码 → 自动重试一次 → 再失败标记 Failed | "Builder-3 session 意外断开 → 等待 10s → 重新 spawn 同一任务 → 仍失败 → 标记 Failed，记录 stderr 输出" |
 ```
 
 ### Report 阶段
@@ -413,14 +414,14 @@ Orchestrator 必须介入做决策
 
 ### 各阶段输出格式
 
-| 阶段 | 输出内容 | 格式 |
-|------|---------|------|
-| Intent Gate | 任务类型 + 复杂度 + 风险点 + 建议 | 4行 verbalize |
-| Pre-Planning | Risk 列表 + 结构检查结果 | 两个独立 report |
-| Plan | 6段式计划文档 | Markdown 结构 |
-| Dispatch | Task 列表（每个含 role/category/depends_on）| TaskCreate JSON |
-| Monitor | Dashboard 看板 + 异常告警 | 表格 + 状态标记 |
-| Report | 成功/失败汇总 + 产出物清单 + 决策建议 | Markdown summary |
+| 阶段 | 输出内容 | 格式 | 具体示例 |
+|------|---------|------|---------|
+| Intent Gate | 任务类型 + 复杂度 + 风险点 + 建议 | 4行 verbalize | `🚪 Intent Gate: Mixed任务, Medium复杂度。风险: 跨语言代码库分析。建议: 跳过Pre-Planning，直接Plan→Scout调研→Builder分析。` |
+| Pre-Planning | Risk 列表 + 结构检查结果 | 两个独立 report | `Risk Analyst: [1] 潜在循环依赖风险 [2] 模型并发饱和风险` / `Plan Validator: [1] DAG 结构完整 [2] 缺异常处理路径` |
+| Plan | 6段式计划 + 箭头图 DAG | Markdown 结构 | `Scout:调研 ──→ Builder:实现 ──→ Reviewer:审查 ──→ Done` (箭头图) + 6段式表格 |
+| Dispatch | Task 列表（含 role/category/depends_on）| TaskCreate JSON | `TaskCreate(subject="调研vitfly代码结构", role="scout", category="deep", depends_on=[])` |
+| Monitor | Dashboard 看板 + 异常告警 | ASCII 表格 | 含 Status 列(✅/🔄/⏸) + Concurrency slot 数 + Alerts 行 |
+| Report | 成功/失败汇总 + 产出物清单 + 决策建议 | Markdown summary | `3/4 成功, 1 failed. 产出: report.md(2500字), arch-diagram.svg. 建议: 交付,已知问题: 数据库模块未覆盖。` |
 
 ---
 
@@ -614,15 +615,24 @@ Alerts: None
 
 ## 约束规则
 
-1. **Orchestrator 不建造** — 只路由追踪，不亲自执行
-2. **Intent Gate 强制** — 分类前必须 verbalize（类型/复杂度/风险）
-3. **Plan 用户确认** — 不确认不派发；Complex 任务需 Pre-Planning 双审查
-4. **每产出物必审** — 跳过审查 3 次 = 质量漂移；Reviewer 不能审自己造的
-5. **Agent 沉默即卡住** — 5min ping → Blocked；45min 无活动 → 中断；60min → 取消
-6. **熔断生效** — 20 次重复→告警；4000 次→取消；Fix+Verify 超 3 轮→升级
-7. **L1 不互派生** — Planner/Risk/Validator 不能派生其他 L1 角色（防递归循环）
-8. **Tool Restriction（设计提案）** — Risk Analyst / Plan Validator / Scout 建议只读；执行时以平台实际能力为准
-9. **Ship Gate 最终确认** — 用户不过不交付
+### 🚫 禁止行为（违反将导致编排失败）
+
+| # | 禁止 | 后果 | 撤销条件 |
+|---|------|------|---------|
+| F1 | Orchestrator 亲自执行建造工作 | 失去全局视野，团队漂移 | 立即停止，返回路由角色 |
+| F2 | 跳过 Intent Gate 直接派发 | 错误路由，可能浪费大量 token | 回溯执行 Intent Gate |
+| F3 | 未经用户确认就 Dispatch | 用户失去控制权，结果可能无用 | 必须获得明确确认 |
+| F4 | L1 层互派生（Planner→Risk→Validator 递归） | 无限递归规划循环 | 只允许 Orchestrator 派生其他 L1 |
+| F5 | Reviewer 审查自己建造的产出物 | 审查失效，质量漂移 | 重新分配给独立 Reviewer |
+
+### ✅ 强制行为（违反将导致编排不完整）
+
+| # | 强制 | 不执行的后果 | 检查方式 |
+|---|------|------------|---------|
+| M1 | Intent Gate: 必须 verbalize 类型/复杂度/风险/建议 | 无法确定正确编排路径 | 检查输出是否含 4 要素 |
+| M2 | 每产出物必须经至少 1 个独立 Reviewer 审查 | 连续 3 次跳过 → 质量不可逆漂移 | 检查 Review Gate 通过记录 |
+| M3 | Plan Gate: Complex 任务必须 Pre-Planning 双审查 | 遗漏隐藏风险 | Risk Analyst + Plan Validator 均通过 |
+| M4 | Ship Gate: 交付前用户最终确认 | 未经验收的结果交付 | 用户明确说"可以交付" |
 
 ---
 
