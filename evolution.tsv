@@ -5,3 +5,8 @@ timestamp	round	skill	phase	source_skills	action	genes_added	score_delta	note
 2026-05-02T17:35	v1.2.1	orchestra-fusion	deduplicate	quality-report	deduplicate	—	+6 estimated (79%→~88%)	去重精简：移除设计灵感、合并异常处理、约束14→9条、删完整示例(-115行)
 2026-05-02T17:48	v1.2.2	orchestra-fusion	densify	quality-report	densify	—	-9 (79%→70%)	REVERTED: 过度压缩致可读性崩溃
 2026-05-02T17:57	v1.3.0	orchestra-fusion	restructure	quality-report	restructure	trigger-examples,output-formats,null-input-handling,expanded-error-recovery	+12 estimated (target 85%+)	回滚过度压缩+结构性补充：触发示例表/输出格式/输入异常处理
+2026-05-02T18:44	v1.4.0	orchestra-fusion	evidence-trace	architecture-audit	evidence-trace	evidence-trace-table(17-claims),platform-adaptation(3-platforms),degradation-strategies	+6 (credibility)	可信度修补：声明溯源表+平台适配+工具映射+降级策略
+2026-05-02T18:54	v1.4.1	orchestra-fusion	source-verify	OMO-source-clone	correct	corrected-category-names(deep→deep,quick→quick),elevated-3-claims(low→high),marked-model-binding-as-speculative	+4 (accuracy)	OMO源码核查：5槽位/20次/4000次/45min/60min全通过；Category名修正
+2026-05-02T19:02	v1.4.2	orchestra-fusion	darwin-optimize	darwin-baseline(68.2)	fix	demoted-tool-restriction-matrix(硬规则→设计提案),removed-false-OMO-attribution	+6.5 (68.2→74.7 D5:+2)	darwin D5针对性修复：工具限制矩阵从"来自OMO"改为"设计提案"
+2026-05-02T19:11	v1.4.3	orchestra-fusion	darwin-optimize	darwin-round2(74.7)	fill-evidence	omo-evidence.md(7-sections,source-code-excerpts,file-paths)	+2 estimated (D6:2→5)	darwin D6修复：填充OMO源码证据文件，含实际代码摘录+行号
+2026-05-02T19:19	v1.4.4	orchestra-fusion	darwin-optimize	darwin-round3(76.7)	fill-evidence	ato-evidence.md,devfleet-evidence.md,dmux-evidence.md; corrected-dmux-pattern-count(6→5)	+2.3 estimated (D6:5→7)	darwin D6继续：全四个源方案证据文件就绪；修正dmux模式数错误+证据表附文件引用

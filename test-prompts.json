@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "prompt": "帮我用agent团队分析 vitfly 项目的代码结构，然后给出架构改进建议",
+    "expected": "应触发: Intent Gate(分类为Implementation+Research混合) → 识别复杂度为Medium → Plan阶段构建DAG(Scout调研→Builder分析→Reviewer审查) → 展示计划给用户确认。关键输出：任务类型verbalize + DAG图 + 用户确认检查点。不应直接开始执行。",
+    "category": "happy_path"
+  },
+  {
+    "id": 2,
+    "prompt": "全队出击，帮我设计并实现一个无人机状态估计可视化Dashboard",
+    "expected": "应触发: Intent Gate → Pre-Planning(Risk Analyst+Plan Validator, 因含'全队出击'+复杂实现) → 多Wave DAG → Dispatch → Monitor。关键输出：Pre-Planning双审查结果 + 多波次并行计划 + Dashboard看板格式。",
+    "category": "complex"
+  },
+  {
+    "id": 3,
+    "prompt": "改个变量名，把vitfly里的learning_rate改成lr就行",
+    "expected": "应触发: Intent Gate识别为Simple任务 → 降级 → 直接执行，不启用编排。关键输出：明确说明'这是一次简单修改，不需要团队编排'，然后直接修改。不应展示DAG或派发子代理。",
+    "category": "edge_degrade"
+  }
+]

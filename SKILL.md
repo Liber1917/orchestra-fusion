@@ -3,7 +3,7 @@ name: orchestra-fusion
 description: "多智能体编排融合方案。融合四个顶尖编排框架的基因：Agent Team Orchestration 的角色生命周期 + Claude DevFleet 的 DAG/auto_dispatch + dmux-workflows 的并行模式库 + oh-my-opencode 的 Slot并发/Intent Gate/熔断器。Use when 用户说\"编排多个agent\"\"并行执行\"\"构建多智能体流水线\"\"设计agent团队\"\"orchestrate agents\"\"multi-agent workflow\"\"agent pipeline\"\"全队出击\"\"ultrawork\"。"
 description_zh: "多智能体编排融合方案 — ATO × DevFleet × dmux × OMO 四源基因杂交"
 description_en: "Multi-agent orchestration fusion — hybrid of ATO, DevFleet, dmux, and OMO patterns"
-version: 1.3.1
+version: 1.4.5
 agent_created: true
 allowed-tools: Read,Write,Edit,Bash,Glob,Grep,TaskCreate,TaskGet,TaskUpdate,TaskList,SendMessage
 ---
@@ -58,7 +58,7 @@ allowed-tools: Read,Write,Edit,Bash,Glob,Grep,TaskCreate,TaskGet,TaskUpdate,Task
 |---------|---------|---------------|
 | **Agent Team Orchestration** | 角色分工、任务生命周期、Handoff、强制审查 | 团队骨架 |
 | **Claude DevFleet** | DAG依赖规划、auto_dispatch、工作树隔离、看板 | 执行引擎 |
-| **dmux-workflows** | 6种并行模式、merge策略 | 并行策略库 |
+| **dmux-workflows** | 5种并行模式、tmux pane管理、git worktree集成 | 并行策略库 |
 | **oh-my-opencode** | Intent Gate、Slot并发+熔断、Pre-Planning、陈旧检测 | 防御+规划增强 |
 
 > "这不是四个技能的拼接，而是提取各自最优秀的基因，杂交出一个新物种。" — Orchestra Fusion
@@ -102,15 +102,19 @@ Layer 3: Executors（执行层）
 | L2 | **Reviewer** | 独立质量验证、交叉审查 | 高推理 | 1-N | subagent |
 | L3 | **Worker** | 按Category自动匹配最优模型执行 | Category特定 | 0-N | subagent |
 
-### 工具限制（安全边界）— 来自 OMO 设计
+### 工具限制（安全边界）— 设计提案
 
-| 角色 | 禁止工具 | 原因 |
+> ⚠️ **设计提案，非 OMO 原文。** 以下工具限制矩阵为本 skill 的设计建议。
+> OMO 源码中**未找到**角色级工具白名单/黑名单机制。
+> 实际执行时，以运行平台的能力为准。
+
+| 角色 | 建议限制 | 原因 |
 |------|---------|------|
-| **Risk Analyst** | Write, Edit, TaskCreate | 只读分析，不修改代码 |
-| **Plan Validator** | Write, Edit, TaskCreate | 只验证不执行 |
-| **Scout** | Write, Edit, TaskCreate | 只调研，不修改 |
-| **Reviewer** | TaskCreate | 只审查，不派生新任务 |
-| **Worker** | TaskCreate, SendMessage(broadcast) | 只执行分配任务，不自行扩编 |
+| **Risk Analyst** | 只读（不 Write/Edit/Create） | 只读分析，不修改代码 |
+| **Plan Validator** | 只读（不 Write/Edit/Create） | 只验证不执行 |
+| **Scout** | 只读（不 Write/Edit/Create） | 只调研，不修改 |
+| **Reviewer** | 不派生新任务 | 只审查，不自行扩编 |
+| **Worker** | 不派生新任务/不广播 | 只执行分配任务
 
 **核心原则：**
 - Orchestrator 不执行建造工作
@@ -325,6 +329,22 @@ Orchestrator 必须介入做决策
 8. 🚪 Plan Gate — 用户确认
 
 产出：Task 列表（TaskCreate），每个 task 标记角色、Category 和依赖
+
+**DAG 输出格式要求：** 计划展示中的「依赖图」必须以可视化形式呈现：
+
+```
+✅ 推荐 — 箭头图（ASCII）:
+  Scout:调研 ──→ Builder:实现 ──→ Reviewer:审查 ──→ Done
+
+✅ 推荐 — 结构化列表:
+  Wave 1: [Scout:调研] [Scout:前端]     ← 并行
+  Wave 2: [Builder:实现] (依赖 Wave 1)   ← 等待
+  Wave 3: [Reviewer:审查] (依赖 Wave 2)
+
+❌ 不推荐 — 纯文字描述:
+  "先调研再实现再审查"
+```
+
 ```
 
 ### Dispatch 阶段
@@ -485,15 +505,31 @@ git worktree add -b feat/module-B ../module-B HEAD
 
 ### Category Dispatch — 按任务域匹配模型（来自 OMO）
 
-| 任务域 | 推荐模型 | 适用场景 |
+> ⚠️ **已验证：** Category 名称来自 OMO 源码确认 (`visual-engineering`, `ultrabrain`, `deep`, `quick`, `artistry`, `writing`)。
+> 但模型名称 **不在 Category 定义中**——OMO 使用独立的 4-step 模型决议系统。
+> 下表中的模型列为本 skill 的建议匹配，非 OMO 原文。
+
+| 任务域（OMO 原名） | 建议模型（本 skill 推测） | 适用场景 |
 |--------|---------|---------|
-| `visual-engineering` | Gemini 3.1 Pro | UI/UX、CSS、设计系统 |
+| `visual-engineering` | Gemini 3.1 Pro 等视觉模型 | UI/UX、CSS、设计系统 |
 | `ultrabrain` | GPT-5.4 xhigh / Claude Opus max | 重逻辑、架构设计 |
-| `deep-work` | GPT-5.4 medium / Claude Sonnet | 目标导向自主工作 |
-| `fast-search` | Grok-Code-Fast / MiniMax | 快速代码搜索 |
+| `deep` | GPT-5.4 medium / Claude Sonnet | 目标导向自主工作 |
+| `quick` | Grok-Code-Fast / MiniMax | 快速代码搜索 |
+| `writing` | Claude Sonnet / GPT-5.4 | 文档、写作 |
+| `artistry` | 创意类模型 | 创意设计、视觉艺术 |
 | `general` | 用户当前选择 | 通用任务 |
 
-Orchestrator 在 Dispatch 阶段根据任务特征自动选择 Category，Worker 使用 Category 匹配的最优模型执行。
+Orchestrator 在 Dispatch 阶段根据任务特征自动选择 Category。
+
+**深度感知规则：** 同一角色在不同深度的任务中使用不同 Category：
+
+| 角色 | 浅层任务 | Category | 深层任务 | Category |
+|------|---------|----------|---------|----------|
+| Scout | 搜索已知信息、API文档查询 | `quick` | 代码库深度分析、架构调研 | `deep` |
+| Builder | 简单CRUD、配置修改 | `quick` | 核心算法实现、架构重构 | `ultrabrain` |
+| Reviewer | 格式检查、lint验证 | `quick` | 架构级审查、安全审计 | `ultrabrain` |
+
+> 判断原则：**涉及跨文件理解、需要上下文推理的任务用 `deep` 或 `ultrabrain`；单文件、确定性任务用 `quick`。**
 
 ---
 
@@ -585,7 +621,7 @@ Alerts: None
 5. **Agent 沉默即卡住** — 5min ping → Blocked；45min 无活动 → 中断；60min → 取消
 6. **熔断生效** — 20 次重复→告警；4000 次→取消；Fix+Verify 超 3 轮→升级
 7. **L1 不互派生** — Planner/Risk/Validator 不能派生其他 L1 角色（防递归循环）
-8. **Tool Restriction** — Risk Analyst / Plan Validator / Scout 禁止 Write 操作
+8. **Tool Restriction（设计提案）** — Risk Analyst / Plan Validator / Scout 建议只读；执行时以平台实际能力为准
 9. **Ship Gate 最终确认** — 用户不过不交付
 
 ---
@@ -654,6 +690,104 @@ Alerts: None
 用户："只用一个agent做这个"
 → 退化到单Agent执行，不需要团队编排
 ```
+
+---
+
+## 证据溯源 — Evidence Trace
+
+> **本 skill 中关于四个源方案的声明并非同等可信。**
+> 以下按置信度分级标注，区分「原文提取的事实」和「模型推测的设计决策」。
+> 未列出的声明（如具体罚值、角色名）视为「设计决策」而非「事实引用」。
+
+### 置信度说明
+
+| 标记 | 含义 | 准则 |
+|------|------|------|
+| ✅ **高** | 从源 SKILL.md 原文直接提取，可引用段落/行号 | 事实 |
+| ⚠️ **中** | 概念在源文件中存在，但具体参数/名称/细节可能是填充的 | 半事实半推测 |
+| ❌ **低** | 源文件中未找到对应内容，基于概念名或模型先验知识推测 | 推测 |
+| 🆕 **独创** | 本方案的原创设计，不来自任何源方案 | 设计决策 |
+
+### 声明溯源表
+
+| 声明 | 声称来源 | 置信度 | 核查说明 |
+|------|---------|--------|---------|
+| 角色分工模型（Orchestrator/Scout/Builder/Reviewer） | ATO/🆕 | ⚠️ 中 | ATO 原文仅 4 角色（Orchestrator/Builder/Reviewer/Ops），Scout/Risk Analyst/Plan Validator 为 orchestra-fusion 扩展。详见 `references/source-evidence/ato-evidence.md §1` |
+| 任务生命周期（Inbox→Assigned→In_Progress→Review→Done） | ATO | ✅ 高 | ATO 原文: `Inbox→Assigned→In Progress→Review→Done|Failed`。`[Blocked]` 为 orchestra-fusion 扩展。详见 `references/source-evidence/ato-evidence.md §2` |
+| Handoff 5要素协议 | ATO | ✅ 高 | ATO 原文逐字对应。详见 `references/source-evidence/ato-evidence.md §3` |
+| 强制审查（每产出物必审，Reviewer不能审自己的） | ATO | ✅ 高 | ATO: "every artifact gets at least one set of eyes that didn't produce it." 详见 `references/source-evidence/ato-evidence.md §4` |
+| DAG 依赖规划 + auto_dispatch 链 | DevFleet | ✅ 高 | DevFleet MCP tool: `plan_project(prompt) → project_id + mission DAG`。详见 `references/source-evidence/devfleet-evidence.md §1` |
+| 工作树隔离 (EnterWorktree) | DevFleet | ✅ 高 | DevFleet: "Each agent runs in an isolated git worktree." 详见 `references/source-evidence/devfleet-evidence.md §2` |
+| 看板仪表盘 | DevFleet | ✅ 高 | DevFleet: `get_dashboard()` + `get_mission_status()`。详见 `references/source-evidence/devfleet-evidence.md §3` |
+| 5种并行模式（Research+Build / Multi-Build / Review Pipeline / Fix+Verify / Escalation） | dmux/🆕 | ⚠️ 中 | dmux 原文有 5 种模式（Research+Implement/Multi-File/Test+Fix/Cross-Harness/Code Review Pipeline）。Pattern 5 (Escalation) 和 Pattern 0 为 orchestra-fusion 创新。详见 `references/source-evidence/dmux-evidence.md` |
+| Interview-Mode 访谈式规划 (Pattern 0) | OMO | ✅ 高 | 5步访谈流程和6段式计划模板来自 OMO 原文 |
+| 3-Tier 层级模型 (Orchestrator/Specialist/Executor) | OMO | ✅ 高 | 分层结构来自 OMO 原文 |
+| Pre-Planning 双审查（Risk Analyst + Plan Validator） | OMO | ✅ 高 | 双审查机制在 OMO 原文中有描述 |
+| Slot-Based 并发模型（每个 Key 最多 5 槽位） | OMO | ✅ 高 | **源码确认：** `ConcurrencyManager.getConcurrencyLimit()` 默认 `return 5`。详见 `references/source-evidence/omo-evidence.md §1` |
+| Circuit Breaker 熔断器阈值（20次重复/4000次总调用） | OMO | ✅ 高 | **源码确认：** `DEFAULT_CIRCUIT_BREAKER_CONSECUTIVE_THRESHOLD = 20`，`DEFAULT_MAX_TOOL_CALLS = 4000`。详见 `references/source-evidence/omo-evidence.md §2` |
+| Stale Detection 陈旧检测阈值（45min/60min） | OMO | ✅ 高 | **源码确认：** `DEFAULT_STALE_TIMEOUT_MS = 2_700_000` (45min)，`DEFAULT_MESSAGE_STALENESS_TIMEOUT_MS = 3_600_000` (60min)。详见 `references/source-evidence/omo-evidence.md §3` |
+| Intent Gate 意图门禁（强制 verbalize 路由判断） | OMO/🆕 | ⚠️ 中 | OMO Atlas Agent 有 task routing 逻辑但无 "Intent Gate" 命名；4条规则的具体形式可能为本 skill 独创 |
+| Category Dispatch 分类机制 | OMO | ✅ 高 | **源码确认：** categories 包括 `visual-engineering`, `ultrabrain`, `deep`, `quick`, `artistry`, `writing` 等，见 `dynamic-agent-category-skills-guide.ts` |
+| Category Dispatch 中的模型绑定（Gemini 3.1 Pro / GPT-5.4 等） | OMO | ❌ 低 | **需要区分：** Category 定义本身不绑定模型名称。OMO 有独立的 4-step 模型决议系统（override → category-default → provider-fallback → system-default）。本 skill 的 Category Dispatch 表中的模型名称为推测填充 |
+| Category 名称 `deep-work` | OMO | ❌ 错 | OMO 实际 category 名为 `deep`，非 `deep-work` |
+| Category 名称 `fast-search` | OMO | ❌ 错 | OMO 实际 category 名为 `quick`，非 `fast-search` |
+| 工具限制矩阵（Risk Analyst 禁止 Write/Edit 等） | 🆕 设计提案 | ❌ 低 | **已核实：** OMO 源码中**不存在**角色级工具限制。此矩阵为本 skill 的设计建议，非源方案事实。正文已标注"设计提案" |
+| Unstable Agent 处理（升格为监控后台模式） | OMO | ⚠️ 中 | OMO 有子进程管理和 TTL 机制（`TASK_TTL_MS = 30min`），但"升格为监控后台模式"的具体策略未确认 |
+| Ship Gate（用户最终确认才交付） | 🆕 独创 | 🆕 | 本方案原创的质量门禁节点 |
+
+### 维护规则
+
+1. 每次修改涉及到源方案声明时，必须更新此表
+2. 新核验到的事实应标注来源文件路径
+3. ❌ 低置信度声明在核实前不得作为编排决策的依据
+
+---
+
+## 平台适配 — Platform Adaptation
+
+> 本 skill 的**编排逻辑**（Intent→Plan→Dispatch→Monitor→Report、DAG、门禁、角色模型）是平台无关的。
+> 但**工具调用层**因平台而异。以下为各平台的具体映射。
+
+### 加载方式对比
+
+| 维度 | WorkBuddy | Claude Code | OpenCode |
+|------|-----------|-------------|----------|
+| Skill 加载 | `Skill("orchestra-fusion")` tool call | `/command` 或 description 语义匹配 → System Prompt 注入 | `opencode skill load` |
+| Agent 自主发现 | `<available_skills>` 全局注册表，Agent 启动即知 | 基于 `description` 字段语义匹配 | 需手动指定 |
+| 加载后行为 | 上下文注入，Agent Loop 中继续推理 | 上下文注入，Agent 在新指令下继续 | 上下文注入 |
+
+### 工具映射
+
+| 编排步骤 | WorkBuddy（原生） | Claude Code | OpenCode |
+|---------|-------------------|-------------|----------|
+| **派生子代理** | `Agent()` tool + subagent_type | `claude -p "prompt"` CLI 非交互模式 | `opencode agent spawn` |
+| **任务队列** | `TaskCreate/Get/Update/List` | 文件队列（`.tasks/` 目录下 JSON） | 文件队列或 TOML plan |
+| **Agent 间通信** | `SendMessage(type="message")` | git notes 或共享文件 | stdout 管道 |
+| **任务依赖追踪** | `TaskCreate` 的 `addBlockedBy` 字段 | JSON 任务文件中的 `depends_on` 字段 | TOML plan 中的 `after` 字段 |
+| **实时看板** | `TaskList` → 表格渲染 | 读取 `.tasks/` 目录 → Markdown 表格 | `opencode status` |
+| **工作树隔离** | `EnterWorktree` | 手动 `git worktree add` | 手动 `git worktree add` |
+| **代码审查** | `Read` + `Grep` + 内联审查 | `claude -p "review..."` | `opencode review` |
+
+### Claude Code 降级策略
+
+当在 Claude Code 环境加载本 skill 时：
+
+1. **任务管理降级**：创建 `.tasks/` 目录，每个任务一个 `{task-id}.json` 文件
+   ```json
+   {"id": "scout-1", "role": "scout", "status": "pending", "depends_on": [], "handoff": null}
+   ```
+2. **子代理降级**：用 `claude -p` 非交互模式，prompt 中包含 Handoff 协议模板
+3. **通信降级**：子代理结果写入 `.tasks/{task-id}.result.md`，主 agent 读取后继续
+4. **🛑 不支持的**：Slot-Based 并发控制、Circuit Breaker 熔断器、Stale Detection 陈旧检测
+   （这些依赖 WorkBuddy 运行时的监控能力，Claude Code 无等效机制）
+
+### OpenCode 降级策略
+
+当在 OpenCode 环境加载本 skill 时：
+
+1. **任务管理降级**：使用 OpenCode 原生 TOML plan 格式
+2. **子代理降级**：`opencode agent spawn --role scout --prompt "..."` 
+3. **🛑 不支持的**：同 Claude Code，无 Slot 并发/熔断/陈旧检测
 
 ---
 

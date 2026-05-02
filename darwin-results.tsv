@@ -1,0 +1,7 @@
+timestamp	skill	old_score	new_score	status	dimension	note	eval_mode
+2026-05-02T18:57	orchestra-fusion	—	68.2	baseline	—	darwin Phase 1: D1=7,D2=8,D3=8,D4=8,D5=6,D6=2,D7=8,D8=6	dry_run
+2026-05-02T19:02	orchestra-fusion	68.2	74.7	keep	D5 指令具体性	工具限制矩阵 "来自OMO"→"设计提案"，去掉未核实工具名	dry_run
+2026-05-02T19:11	orchestra-fusion	74.7	76.7	keep	D6 资源整合度	填充 omo-evidence.md，含源码摘录+文件路径+行号	dry_run
+2026-05-02T19:19	orchestra-fusion	76.7	79.0	keep	D6 资源整合度	填充 ato/devfleet/dmux 三个证据文件；修正 dmux 模式数(6→5)；所有✅声明附证据文件引用	dry_run
+2026-05-02T19:29	orchestra-fusion	79.0	79.0	test	D8 实测表现	全量测试: T1(降级)✅PASS, T2(编排)✅PASS, T3(SKIP)。发现2个问题→v1.4.5修复	full_test
+2026-05-02T19:31	orchestra-fusion	79.0	80.5	keep	D2+D5	修复: ①Category深度感知规则(Scout深分析→deep非quick) ②DAG输出格式强制要求(箭头图/结构化列表)	full_test
