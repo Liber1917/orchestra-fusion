@@ -3,7 +3,7 @@ name: orchestra-fusion
 description: "多智能体编排融合方案。融合四个顶尖编排框架的基因：Agent Team Orchestration 的角色生命周期 + Claude DevFleet 的 DAG/auto_dispatch + dmux-workflows 的并行模式库 + oh-my-opencode 的 Slot并发/Intent Gate/熔断器。Use when 用户说\"编排多个agent\"\"并行执行\"\"构建多智能体流水线\"\"设计agent团队\"\"orchestrate agents\"\"multi-agent workflow\"\"agent pipeline\"\"全队出击\"\"ultrawork\"。"
 description_zh: "多智能体编排融合方案 — ATO × DevFleet × dmux × OMO 四源基因杂交"
 description_en: "Multi-agent orchestration fusion — hybrid of ATO, DevFleet, dmux, and OMO patterns"
-version: 1.5.2
+version: 1.5.3
 agent_created: true
 allowed-tools: Read,Write,Edit,Bash,Glob,Grep,TaskCreate,TaskGet,TaskUpdate,TaskList,SendMessage
 ---
@@ -13,6 +13,8 @@ allowed-tools: Read,Write,Edit,Bash,Glob,Grep,TaskCreate,TaskGet,TaskUpdate,Task
 > **基因来源：** Agent Team Orchestration（角色+生命周期） × Claude DevFleet（DAG+auto_dispatch） × dmux-workflows（并行模式库） × **oh-my-opencode（Slot并发+Intent Gate+熔断器）**
 >
 > 核心理念：**Intent → Plan → Dispatch → Monitor → Report**，每一步都有质量门禁和人在回路。
+>
+> 以下每个章节末尾标注了其在 5 阶段管线中的定位。
 
 ---
 
@@ -53,6 +55,8 @@ allowed-tools: Read,Write,Edit,Bash,Glob,Grep,TaskCreate,TaskGet,TaskUpdate,Task
 > "这不是四个技能的拼接，而是提取各自最优秀的基因，杂交出一个新物种。" — Orchestra Fusion
 
 四个源方案均可作为降级路径——当复杂度不需要时，退化到更适合的方案。
+
+*[管线定位: 设计哲学 → 贯穿 Intent→Plan→Dispatch→Monitor→Report 全流程]*
 
 ---
 
@@ -110,6 +114,8 @@ Layer 3: Executors（执行层）
 - 每个产出物至少经独立眼睛审查
 - Reviewer 不能审查自己建造的产出物
 - L1 层（除 Orchestrator）不互派生（防递归规划循环）
+
+*[管线定位: 团队架构 → Dispatch 阶段的角色分配依据]*
 
 ### 任务生命周期
 
@@ -184,6 +190,8 @@ auto_dispatch 设置：
 
 展示 DAG（节点/角色/输入输出/依赖/并发数），**用户确认后才派发。**
 
+*[管线定位: DAG 依赖规划 → Plan 阶段的核心产出]*
+
 ---
 
 ## Intent Gate — 意图门禁
@@ -210,6 +218,8 @@ auto_dispatch 设置：
 2. 必须识别：复杂度（Simple / Medium / Complex / Critical）
 3. 必须预警：潜在风险点
 4. 必须建议：是否需要 Pre-Planning 阶段
+
+*[管线定位: Intent Gate → 管线的入口门禁（Intent→Plan）]*
 
 ---
 
@@ -299,6 +309,8 @@ Builder:尝试方案A ──→ 失败 ──→ Orchestrator 判断
 Orchestrator 必须介入做决策
 ```
 
+*[管线定位: 并行模式库 → Dispatch 阶段策略选择]*
+
 ---
 
 ## 完整工作流
@@ -318,6 +330,8 @@ Orchestrator 必须介入做决策
 8. 🚪 Plan Gate — 用户确认
 
 产出：Task 列表（TaskCreate），每个 task 标记角色、Category 和依赖
+
+*[管线定位: Plan 阶段 → Intent Gate 后、Dispatch 前]*
 
 **DAG 输出格式要求：** 计划展示中的「依赖图」必须以可视化形式呈现：
 
@@ -347,6 +361,9 @@ Orchestrator 必须介入做决策
 6. Orchestrator 进入 Monitor 状态
 ```
 
+*[管线定位: Dispatch 阶段 → Plan Gate 确认后]*
+
+
 ### Monitor 阶段
 
 ```
@@ -365,6 +382,9 @@ Orchestrator 必须介入做决策
 
 关键：Orchestrator 在 Monitor 阶段不执行建造工作
 ```
+
+*[管线定位: Monitor 阶段 → Dispatch 后的持续监控]*
+
 
 **常见异常处理：**
 
@@ -401,6 +421,9 @@ Orchestrator 必须介入做决策
 4. 用户最终确认 → Ship 或 Rework
 ```
 
+*[管线定位: Report 阶段 → 所有任务终态后的汇总交付]*
+
+
 ### 各阶段输出格式
 
 | 阶段 | 输出内容 | 格式 | 具体示例 |
@@ -428,6 +451,9 @@ Orchestrator 必须介入做决策
 | **循环依赖**（A依赖B，B依赖A） | 1) Plan 阶段 DAG 校验检测到环 → 2) 拒绝构建 → 3) 要求分解 | `"检测到循环依赖：Task-A 依赖 Task-B，同时 Task-B 依赖 Task-A。请将这两个任务合并为一个，或重新定义依赖关系。"` |
 | **并发饱和**（所有 Key 全满） | 1) 新任务申请槽位 → 2) FIFO 排队 → 3) 告警用户 | `"系统繁忙：当前 15/15 槽位已满，您的任务已加入队列（位置 #3）。预计等待 2-5 分钟。"` |
 | **冲突的关键词**（同时含"全队出击"+"只用一个agent"） | 1) 后出现的指令覆盖前者 → 2) 明确说明歧义 → 3) 要求确认 | `"检测到冲突指令：'全队出击'（多agent）和'只用一个agent'。以最后一条为准，将使用单Agent模式。是否确认？"` |
+
+*[管线定位: 输入异常处理 → Intent Gate 入口前过滤]*
+
 
 ---
 
@@ -514,6 +540,9 @@ git worktree add -b feat/module-B ../module-B HEAD
 
 Orchestrator 在 Dispatch 阶段根据任务特征自动选择 Category。
 
+*[管线定位: 并发控制 → Monitor 阶段的资源保障]*
+
+
 **深度感知规则：** 同一角色在不同深度的任务中使用不同 Category：
 
 | 角色 | 浅层任务 | Category | 深层任务 | Category |
@@ -546,6 +575,8 @@ Orchestrator 在 Dispatch 阶段根据任务特征自动选择 Category。
 - ✅ Handoff 文档是否完整？
 
 **审查不通过流程：** Reviewer 写具体问题 → Orchestrator 返回 In_Progress → Builder 修复重交 → 重新审查（最多3轮，第4轮升级 Escalation）
+
+*[管线定位: 质量门禁 → 贯穿 Intent→Plan→Dispatch→Monitor→Report 全过程检查点]*
 
 ---
 
