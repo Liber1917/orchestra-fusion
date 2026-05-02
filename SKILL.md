@@ -3,7 +3,7 @@ name: orchestra-fusion
 description: "多智能体编排融合方案。融合四个顶尖编排框架的基因：Agent Team Orchestration 的角色生命周期 + Claude DevFleet 的 DAG/auto_dispatch + dmux-workflows 的并行模式库 + oh-my-opencode 的 Slot并发/Intent Gate/熔断器。Use when 用户说\"编排多个agent\"\"并行执行\"\"构建多智能体流水线\"\"设计agent团队\"\"orchestrate agents\"\"multi-agent workflow\"\"agent pipeline\"\"全队出击\"\"ultrawork\"。"
 description_zh: "多智能体编排融合方案 — ATO × DevFleet × dmux × OMO 四源基因杂交"
 description_en: "Multi-agent orchestration fusion — hybrid of ATO, DevFleet, dmux, and OMO patterns"
-version: 1.2.2
+version: 1.3.0
 agent_created: true
 allowed-tools: Read,Write,Edit,Bash,Glob,Grep,TaskCreate,TaskGet,TaskUpdate,TaskList,SendMessage
 ---
@@ -112,7 +112,11 @@ Layer 3: Executors（执行层）
 | **Reviewer** | TaskCreate | 只审查，不派生新任务 |
 | **Worker** | TaskCreate, SendMessage(broadcast) | 只执行分配任务，不自行扩编 |
 
-**核心原则：** Orchestrator 不建造 | 每产出物必审 | Reviewer 不能审自己造的 | L1（除Orchestrator外）不互派生（防递归循环）
+**核心原则：**
+- Orchestrator 不执行建造工作
+- 每个产出物至少经独立眼睛审查
+- Reviewer 不能审查自己建造的产出物
+- L1 层（除 Orchestrator）不互派生（防递归规划循环）
 
 ### 任务生命周期
 
@@ -387,6 +391,31 @@ Orchestrator 必须介入做决策
 4. 用户最终确认 → Ship 或 Rework
 ```
 
+### 各阶段输出格式
+
+| 阶段 | 输出内容 | 格式 |
+|------|---------|------|
+| Intent Gate | 任务类型 + 复杂度 + 风险点 + 建议 | 4行 verbalize |
+| Pre-Planning | Risk 列表 + 结构检查结果 | 两个独立 report |
+| Plan | 6段式计划文档 | Markdown 结构 |
+| Dispatch | Task 列表（每个含 role/category/depends_on）| TaskCreate JSON |
+| Monitor | Dashboard 看板 + 异常告警 | 表格 + 状态标记 |
+| Report | 成功/失败汇总 + 产出物清单 + 决策建议 | Markdown summary |
+
+---
+
+## 输入异常处理
+
+| 异常输入 | 处理方式 |
+|---------|---------|
+| **空输入 / 无请求** | 不触发编排，正常等待 |
+| **格式错误**（乱码/非文本） | Intent Gate 捕捉 → 要求用户重新表述 |
+| **超出范围**（如"帮我发射火箭"） | Intent Gate 识别不可执行 → 建议缩小范围或拒绝 |
+| **Token 超出**（超大请求） | 自动拆分为子任务 → 触发 Pattern 0 访谈澄清 |
+| **引用不存在的文件/模块** | Scout 阶段检测 404 → 返回错误路径 → 要求修正 |
+| **循环依赖**（A依赖B，B依赖A） | Plan 阶段 DAG 校验 → 拒绝 circular dependency → 要求用户分解 |
+| **并发饱和**（所有 Key 全满） | 自动 FIFO 排队 → 告警用户"系统繁忙，任务已排队" |
+
 ---
 
 ## 并发控制
@@ -481,7 +510,13 @@ Orchestrator 在 Dispatch 阶段根据任务特征自动选择 Category，Worker
 | 🚪 Review Gate | Review→Done | 至少1个独立Reviewer通过 | ATO |
 | 🚪 Ship Gate | Report→Done | 用户最终确认 | 独创 |
 
-**审查标准 + 不通过流程：** ✅ 产出符合描述？测试/验证？边界覆盖？Handoff 完整？ → 不通过则 Reviewer 指出问题 → In_Progress → Builder 修复 → 重新审查（最多3轮，第4轮升级 Escalation）
+**审查标准：**
+- ✅ 产出是否符合任务描述？
+- ✅ 是否有测试/验证方法？
+- ✅ 是否有边界条件遗漏？
+- ✅ Handoff 文档是否完整？
+
+**审查不通过流程：** Reviewer 写具体问题 → Orchestrator 返回 In_Progress → Builder 修复重交 → 重新审查（最多3轮，第4轮升级 Escalation）
 
 ---
 
@@ -524,6 +559,18 @@ Alerts: None
 - "agent pipeline" / "parallel agents"
 - "全队出击" / "ultrawork" / "所有agent一起上"
 - "启动熔断" / "slot并发" / "意图门禁" / "interview plan"
+
+### 触发场景示例
+
+| 用户输入 | 自动触发的流程 | 预计模式 |
+|---------|-------------|---------|
+| "帮我用 agent 团队重构认证模块" | Intent→Plan→DAG→Dispatch→Monitor | Pattern 1+2 |
+| "先调研一下微服务方案再决定" | Interview-Mode→访谈→Plan→Dispatch | Pattern 0 |
+| "全队出击，把这个项目上线" | Pre-Planning→全L1角色→Multi-Build→Review Pipeline | 全流程 |
+| "改个登录页的标题" | 直接执行（不启用编排） | 降级 |
+| "评估这个任务的复杂度" | 只分析不执行：Intent Gate→Plan→展示DAG | 仅评估 |
+| "上次的任务继续" | task_id 续接→Monitor→Continue | 中断恢复 |
+| "同时写 A模块、B模块、C模块的单元测试" | DAG→Multi-Build并行→Slot并发3/5 | Pattern 2 |
 
 ---
 
